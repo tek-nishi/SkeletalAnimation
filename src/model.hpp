@@ -161,6 +161,7 @@ QuatKey fromAssimp(const aiQuatKey& key) {
 }
 
 
+// ぼーんの情報を作成
 Bone createBone(const aiBone* b) {
   Bone bone;
 
@@ -319,6 +320,7 @@ std::map<std::string, ci::gl::Texture> loadTexrture(const Model& model) {
   return textures;
 }
 
+// ノードに付随するアニメーション情報を作成
 NodeAnim createNodeAnim(const aiNodeAnim* anim) {
   NodeAnim animation;
 
@@ -342,7 +344,7 @@ NodeAnim createNodeAnim(const aiNodeAnim* anim) {
   return animation;
 }
 
-// アニメーション
+// アニメーション情報を作成
 Anim createAnimation(const aiAnimation* anim) {
   Anim animation;
 
@@ -374,6 +376,7 @@ Anim createAnimation(const aiAnimation* anim) {
 }
 
 
+// 再帰を使って全ノード情報を生成
 void createNodeInfo(const std::shared_ptr<Node>& node,
                     std::map<std::string, std::shared_ptr<Node> >& node_index,
                     std::vector<std::shared_ptr<Node> >& node_list) {
@@ -406,41 +409,11 @@ std::shared_ptr<Node> createNode(const aiNode* const n, aiMesh** mesh) {
   return node;
 }
 
-#if 0
-// ウエイトの事前計算
-void createMeshWeight(Model& model) {
-  for (const auto& node : model.node_list) {
-    for (auto& mesh : node->mesh) {
-      if (!mesh.has_bone) continue;
-
-      mesh.weighted = mesh.orig;
-      auto& mesh_vtx    = mesh.weighted.getVertices();
-      auto& mesh_normal = mesh.weighted.getNormals();
-
-      std::vector<float> vtx_weight(mesh_vtx.size(), 0.0f);
-
-      for (const auto& bone : mesh.bones) {
-        for (const auto& weight : bone.weights) {
-          vtx_weight[weight.vertex_id] += weight.value;
-        }
-      }
-
-      // ウェイト値が1.0にならない場合は残りを元の頂点の値とする
-      for (size_t i = 0; i < vtx_weight.size(); ++i) {
-        mesh_vtx[i] *= 1.0f - vtx_weight[i];
-
-        if (mesh.body.hasNormals()) {
-          mesh_normal[i] *= 1.0f - vtx_weight[i];
-        }
-      }
-    }
-  }
-}
-#endif
-
 #if defined (WEIGHT_WORKAROUND)
 
 // メッシュのウェイトを正規化
+//   ウェイト編集時にウェイトが極端に小さい頂点が発生しうる
+//   その場合に見た目におかしくなってしまうのをいい感じに直す
 void normalizeMeshWeight(Model& model) {
   for (const auto& node : model.node_list) {
     for (auto& mesh : node->mesh) {
@@ -495,7 +468,7 @@ std::pair<size_t, size_t> getMeshInfo(const Model& model) {
   return std::make_pair(vertex_num, triangle_num);
 }
 
-
+// モデル読み込み
 Model loadModel(const std::string& path) {
   Assimp::Importer importer;
 
@@ -599,6 +572,7 @@ ci::Quatf getLerpValue(const double time, const std::vector<QuatKey>& values) {
   return value;
 }
 
+// 階層アニメーション用の行列を計算
 void updateNodeMatrix(Model& model, const double time, const Anim& animation) {
   for (const auto& body : animation.body) {
     ci::Matrix44f matrix;
@@ -619,6 +593,8 @@ void updateNodeMatrix(Model& model, const double time, const Anim& animation) {
   }
 }
 
+// 全ノードの親行列適用済み行列と、その逆行列を計算
+//   メッシュアニメーションで利用
 void updateNodeDerivedMatrix(const std::shared_ptr<Node>& node,
                              const ci::Matrix44f& parent_matrix) {
   node->global_matrix = parent_matrix * node->matrix;
