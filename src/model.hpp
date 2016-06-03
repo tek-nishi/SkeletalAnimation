@@ -9,6 +9,7 @@
 #include "cinder/gl/Material.h"
 #include "cinder/gl/Texture.h"
 #include "cinder/ImageIo.h"
+#include "cinder/AxisAlignedBox.h"
 
 #include "assimp/Importer.hpp"      // C++ importer interface
 #include "assimp/scene.h"           // Output data structure
@@ -29,6 +30,7 @@
 
 #include <map>
 #include <set>
+#include <limits>
 #include "misc.hpp"
 
 
@@ -126,6 +128,8 @@ struct Model {
 
   bool has_anim;
   std::vector<Anim> animation;
+
+  ci::AxisAlignedBox3f aabb;
 };
 
 
@@ -467,6 +471,39 @@ std::pair<size_t, size_t> getMeshInfo(const Model& model) {
 
   return std::make_pair(vertex_num, triangle_num);
 }
+
+// ざっくりAABBを求める
+//   アニメーションで変化するのは考慮しない
+ci::AxisAlignedBox3f calcAABB(const Model& model) {
+  // 最小値を格納する値にはその型の最大値を
+  // 最大値を格納する値にはその型の最小値を
+  // それぞれ代入しておく
+  float max_value = std::numeric_limits<float>::max();
+  ci::Vec3f min_vtx{ max_value, max_value, max_value };
+  
+  float min_value = std::numeric_limits<float>::min();
+  ci::Vec3f max_vtx{ min_value, min_value, min_value };
+
+  // 全頂点を調べてAABBの頂点座標を割り出す
+  for (const auto& node : model.node_list) {
+    for (const auto& mesh : node->mesh) {
+      const auto& verticies = mesh.body.getVertices();
+      for (const auto v : verticies) {
+        min_vtx.x = std::min(v.x, min_vtx.x);
+        min_vtx.y = std::min(v.y, min_vtx.y);
+        min_vtx.z = std::min(v.z, min_vtx.z);
+
+        max_vtx.x = std::max(v.x, max_vtx.x);
+        max_vtx.y = std::max(v.y, max_vtx.y);
+        max_vtx.z = std::max(v.z, max_vtx.z);
+      }
+    }
+  }
+
+  return ci::AxisAlignedBox3f(min_vtx, max_vtx);
+}
+
+
 
 // モデル読み込み
 Model loadModel(const std::string& path) {
