@@ -480,16 +480,19 @@ void normalizeMeshWeight(Model& model) {
 
 #endif
 
-// モデルの全頂点数を数える
-size_t calcVertexNum(const Model& model) {
-  size_t vertex_num = 0;
+// モデルの全頂点数とポリゴン数を数える
+std::pair<size_t, size_t> getMeshInfo(const Model& model) {
+  size_t vertex_num   = 0;
+  size_t triangle_num = 0;
+  
   for (const auto& node : model.node_list) {
     for (const auto& mesh : node->mesh) {
       vertex_num += mesh.body.getNumVertices();
+      triangle_num += mesh.body.getNumIndices() / 3;
     }
   }
 
-  return vertex_num;
+  return std::make_pair(vertex_num, triangle_num);
 }
 
 
@@ -535,7 +538,9 @@ Model loadModel(const std::string& path) {
   normalizeMeshWeight(model);
 #endif
 
-  ci::app::console() << "Total vertex num:" << calcVertexNum(model) << std::endl;
+  auto info = getMeshInfo(model);
+  
+  ci::app::console() << "Total vertex num:" << info.first << " triangle num:" << info.second << std::endl;
   
   return model;
 }
