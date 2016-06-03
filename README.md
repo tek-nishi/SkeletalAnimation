@@ -15,6 +15,8 @@ Assimpで読み込んだモデルデータ(アニメーション含む)をCinder
 
 ## How to build
 Cinderはもとより、Assimpのインクルードファイルとライブラリファイルをプロジェクトから参照できるようにしておいてください。
+
+あと、テストデータは自前で用意してください。
  
 ## Liense
 License All source code files are licensed under the MPLv2.0 license
