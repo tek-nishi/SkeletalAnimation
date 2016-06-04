@@ -192,8 +192,14 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   console() << model.aabb.getSize() << std::endl;
   offset = -model.aabb.getCenter();
 
+  rotate     = Quatf::identity();
+  translate  = Vec3f::zero();
+  scale      = 1.0f;
+
   z_distance = getCameraDistance(model, fov);
   console() << "z_distance:" << z_distance << std::endl;
+
+  touch_num = 0;
 }
 
 
@@ -238,6 +244,8 @@ void AssimpApp::keyDown(KeyEvent event) {
     scale      = 1.0f;
 
     z_distance = getCameraDistance(model, fov);
+
+    touch_num = 0;
   }
 }
 
@@ -283,7 +291,7 @@ void AssimpApp::touchesMoved(TouchEvent event) {
   float l_prev = (v2_prev - v1_prev).length();
   float ld = l - l_prev;
 
-  if (std::abs(ld) < 2.0f) {
+  if (std::abs(ld) < 3.0f) {
     translate += d * 0.005f;
   }
   else {
@@ -315,9 +323,9 @@ void AssimpApp::draw() {
 
   gl::translate(Vec3f(0, 0.0, -z_distance));
 
+  gl::translate(translate);
   // FIXME:CinderのQuatfをOpenGLに渡す実装がよくない
   gl::multModelView(rotate.toMatrix44());
-  gl::translate(translate);
   gl::scale(Vec3f(scale, scale, scale));
 
   gl::translate(offset);
