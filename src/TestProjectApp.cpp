@@ -15,6 +15,16 @@ using namespace ci;
 using namespace ci::app;
 
 
+// AABBからいい感じにカメラまでの距離を決める
+float getCameraDistance(Model& model, const float fov) {
+  float w = model.aabb.getSize().length() / 2.0f;
+  float distance = w / std::tan(toRadians(fov / 2.0f));
+  console() << "distance:" << distance << std::endl;
+
+  return distance;
+}
+
+
 class AssimpApp : public AppNative {
   enum {
     WINDOW_WIDTH  = 800,
@@ -27,6 +37,7 @@ class AssimpApp : public AppNative {
 
   float fov;
   float near_z;
+  float far_z;
 
   gl::Light* light;
 
@@ -40,6 +51,7 @@ class AssimpApp : public AppNative {
   
   
   Model model;
+  Vec3f offset;
   
   double current_time;
 
@@ -56,6 +68,8 @@ public:
   
   void mouseDown(MouseEvent event);
   void mouseDrag(MouseEvent event);
+
+  void keyDown(KeyEvent event);	
   
   void touchesBegan(TouchEvent event);
   void touchesMoved(TouchEvent event);
@@ -81,16 +95,40 @@ void AssimpApp::setup() {
   getSignalSupportedOrientations().connect([]() { return ci::app::InterfaceOrientation::All; });
 #endif
   
+  // モデルデータ読み込み
+  model = loadModel("miku.dae");
+  // 初期位置はモデルのAABBの中心位置とする
+  offset = -model.aabb.getCenter();
+  console() << model.aabb.getSize() << std::endl;
+  
+  // models.push_back(loadModel("akatsuki_dance.dae"));
+  // offsets.push_back(Vec3f{ -2.6f, 0.0f, 0.0f });
+  // models.push_back(loadModel("ikazuchi_dance.dae"));
+  // offsets.push_back(Vec3f{ 0.0f, 0.0f, 0.0f });
+  // models.push_back(loadModel("nagatsuki_dance.dae"));
+  // offsets.push_back(Vec3f{ 2.6f, 0.0f, 0.0f });
+
+  // カメラの設定
   fov    = 35.0f;
-  near_z = 1.0f;
+  near_z = 0.1f;
+  far_z  = 100.0f;
   
   camera_persp = CameraPersp(WINDOW_WIDTH, WINDOW_HEIGHT,
                              fov,
-                             near_z, 50.0f);
+                             near_z, far_z);
 
-  camera_persp.setEyePoint(Vec3f(0.0f, 0.0f, 0.0f));
-  camera_persp.setCenterOfInterestPoint(Vec3f(0.0f, 0.0f, -1000.0f));
+  camera_persp.setEyePoint(Vec3f::zero());
+  camera_persp.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1000.0f });
 
+  rotate     = Quatf::identity();
+  translate  = Vec3f::zero();
+  scale      = 1.0f;
+
+  // モデルがスッポリ画面に入るようカメラ位置を調整
+  z_distance = getCameraDistance(model, fov);
+  console() << "z_distance:" << z_distance << std::endl;
+  
+  // ライトの設定
   light = new gl::Light(gl::Light::DIRECTIONAL, 0);
   light->setAmbient(Color(0.0, 0.0, 0.0));
   light->setDiffuse(Color(0.9, 0.9, 0.9));
@@ -106,16 +144,6 @@ void AssimpApp::setup() {
   // TIPS:これで、テクスチャを張ったポリゴンもキラーン!!ってなる
   glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #endif
-  
-  // モデルデータ読み込み
-  // model = loadModel("astroboy_walk.dae");
-  model = loadModel("mikuonndo.dae");
-  // model = loadModel("miku.dae");
-
-  rotate     = Quatf::identity();
-  translate  = Vec3f::zero();
-  z_distance = 2.0f;
-  scale      = 1.0f;
   
   current_time = 0.0;
   
@@ -161,6 +189,11 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   console() << path[0].filename() << std::endl;
 
   model = loadModel(path[0].filename().string());
+  console() << model.aabb.getSize() << std::endl;
+  offset = -model.aabb.getCenter();
+
+  z_distance = getCameraDistance(model, fov);
+  console() << "z_distance:" << z_distance << std::endl;
 }
 
 
@@ -192,6 +225,19 @@ void AssimpApp::mouseDrag(MouseEvent event) {
     }
     
     mouse_prev_pos = mouse_pos;
+  }
+}
+
+
+void AssimpApp::keyDown(KeyEvent event) {
+  int key_code = event.getCode();
+
+  if (key_code == KeyEvent::KEY_r) {
+    rotate     = Quatf::identity();
+    translate  = Vec3f::zero();
+    scale      = 1.0f;
+
+    z_distance = getCameraDistance(model, fov);
   }
 }
 
@@ -253,8 +299,9 @@ void AssimpApp::touchesEnded(TouchEvent event) {
 
 
 void AssimpApp::update() {
+  current_time = getElapsedSeconds();
+  
   updateModel(model, current_time, 0);
-  current_time += 1.0 / 60;
 }
 
 void AssimpApp::draw() {
@@ -272,7 +319,8 @@ void AssimpApp::draw() {
   gl::multModelView(rotate.toMatrix44());
   gl::translate(translate);
   gl::scale(Vec3f(scale, scale, scale));
-  
+
+  gl::translate(offset);
   drawModel(model);
   
   light->disable();

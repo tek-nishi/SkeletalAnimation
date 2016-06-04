@@ -115,7 +115,7 @@ struct Model {
   std::vector<Material> material;
 
   // マテリアルからのテクスチャ参照は名前引き
-  std::map<std::string, ci::gl::Texture> textures;
+  std::map<std::string, ci::gl::TextureRef> textures;
 
   // 親子関係にあるノード
   std::shared_ptr<Node> node;
@@ -309,15 +309,15 @@ Material createMaterial(const aiMaterial* const mat) {
 }
 
 // テクスチャを読み込む
-std::map<std::string, ci::gl::Texture> loadTexrture(const Model& model) {
-  std::map<std::string, ci::gl::Texture> textures;
+std::map<std::string, ci::gl::TextureRef> loadTexrture(const Model& model) {
+  std::map<std::string, ci::gl::TextureRef> textures;
 
   for (const auto& mat : model.material) {
     if (!mat.has_texture) continue;
 
     if (!model.textures.count(mat.texture_name)) {
       textures.insert(std::make_pair(mat.texture_name,
-                                     ci::loadImage(ci::app::loadAsset(mat.texture_name))));
+                                     ci::gl::Texture::create(ci::loadImage(ci::app::loadAsset(mat.texture_name)))));
     }
   }
   
@@ -443,8 +443,8 @@ void normalizeMeshWeight(Model& model) {
         }
         assert(weight > 0.0f);
 
-        if (weight < 0.2f) {
-          ci::app::console() << "Weight min: " << weight << std::endl;
+        {
+          // ci::app::console() << "Weight min: " << weight << std::endl;
           float n = 1.0f / weight;
           for (auto it = p.first; it != p.second; ++it) {
             it->second->value *= n;
@@ -456,6 +456,18 @@ void normalizeMeshWeight(Model& model) {
 }
 
 #endif
+
+// 全ノードの親行列適用済み行列と、その逆行列を計算
+//   メッシュアニメーションで利用
+void updateNodeDerivedMatrix(const std::shared_ptr<Node>& node,
+                             const ci::Matrix44f& parent_matrix) {
+  node->global_matrix = parent_matrix * node->matrix;
+  node->invert_matrix = node->global_matrix.inverted();
+
+  for (auto child : node->children) {
+    updateNodeDerivedMatrix(child, node->global_matrix);
+  }
+}
 
 // モデルの全頂点数とポリゴン数を数える
 std::pair<size_t, size_t> getMeshInfo(const Model& model) {
@@ -472,9 +484,20 @@ std::pair<size_t, size_t> getMeshInfo(const Model& model) {
   return std::make_pair(vertex_num, triangle_num);
 }
 
+
+// FIXME:まさかのプロトタイプ宣言
+void updateModel(Model& model, const double time, const size_t index);
+
+
 // ざっくりAABBを求める
 //   アニメーションで変化するのは考慮しない
-ci::AxisAlignedBox3f calcAABB(const Model& model) {
+ci::AxisAlignedBox3f calcAABB(Model& model) {
+  // ノードの行列を更新
+  updateNodeDerivedMatrix(model.node, ci::Matrix44f::identity());
+
+  // スケルタルアニメーションを考慮
+  updateModel(model, 0.0, 0);
+  
   // 最小値を格納する値にはその型の最大値を
   // 最大値を格納する値にはその型の最小値を
   // それぞれ代入しておく
@@ -489,13 +512,16 @@ ci::AxisAlignedBox3f calcAABB(const Model& model) {
     for (const auto& mesh : node->mesh) {
       const auto& verticies = mesh.body.getVertices();
       for (const auto v : verticies) {
-        min_vtx.x = std::min(v.x, min_vtx.x);
-        min_vtx.y = std::min(v.y, min_vtx.y);
-        min_vtx.z = std::min(v.z, min_vtx.z);
+        // ノードの行列でアフィン変換
+        ci::Vec3f tv = node->global_matrix * v;
+        
+        min_vtx.x = std::min(tv.x, min_vtx.x);
+        min_vtx.y = std::min(tv.y, min_vtx.y);
+        min_vtx.z = std::min(tv.z, min_vtx.z);
 
-        max_vtx.x = std::max(v.x, max_vtx.x);
-        max_vtx.y = std::max(v.y, max_vtx.y);
-        max_vtx.z = std::max(v.z, max_vtx.z);
+        max_vtx.x = std::max(tv.x, max_vtx.x);
+        max_vtx.y = std::max(tv.y, max_vtx.y);
+        max_vtx.z = std::max(tv.z, max_vtx.z);
       }
     }
   }
@@ -511,7 +537,8 @@ Model loadModel(const std::string& path) {
 
   const aiScene* scene = importer.ReadFile(ci::app::getAssetPath(path).string(), 
                                            aiProcess_Triangulate
-                                           | aiProcess_FlipUVs);
+                                           | aiProcess_FlipUVs
+                                           | aiProcess_RemoveRedundantMaterials);
 
   Model model;
   
@@ -548,6 +575,8 @@ Model loadModel(const std::string& path) {
   normalizeMeshWeight(model);
 #endif
 
+  model.aabb = calcAABB(model);
+  
   auto info = getMeshInfo(model);
   
   ci::app::console() << "Total vertex num:" << info.first << " triangle num:" << info.second << std::endl;
@@ -630,18 +659,6 @@ void updateNodeMatrix(Model& model, const double time, const Anim& animation) {
   }
 }
 
-// 全ノードの親行列適用済み行列と、その逆行列を計算
-//   メッシュアニメーションで利用
-void updateNodeDerivedMatrix(const std::shared_ptr<Node>& node,
-                             const ci::Matrix44f& parent_matrix) {
-  node->global_matrix = parent_matrix * node->matrix;
-  node->invert_matrix = node->global_matrix.inverted();
-
-  for (auto child : node->children) {
-    updateNodeDerivedMatrix(child, node->global_matrix);
-  }
-}
-
 
 void updateMesh(Model& model) {
   for (const auto& node : model.node_list) {
@@ -715,14 +732,14 @@ void drawModel(const Model& model, const std::shared_ptr<Node>& node) {
     material.body.apply();
 
     if (material.has_texture) {
-      model.textures.at(material.texture_name).enableAndBind();
+      model.textures.at(material.texture_name)->enableAndBind();
     }
     
     ci::gl::draw(mesh.body);
 
     if (material.has_texture) {
-      model.textures.at(material.texture_name).unbind();
-      model.textures.at(material.texture_name).disable();
+      model.textures.at(material.texture_name)->unbind();
+      model.textures.at(material.texture_name)->disable();
     }
   }
 
