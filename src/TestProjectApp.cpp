@@ -15,16 +15,6 @@ using namespace ci;
 using namespace ci::app;
 
 
-// AABBからいい感じにカメラまでの距離を決める
-float getCameraDistance(Model& model, const float fov) {
-  float w = model.aabb.getSize().length() / 2.0f;
-  float distance = w / std::tan(toRadians(fov / 2.0f));
-  console() << "distance:" << distance << std::endl;
-
-  return distance;
-}
-
-
 class AssimpApp : public AppNative {
   enum {
     WINDOW_WIDTH  = 800,
@@ -48,11 +38,13 @@ class AssimpApp : public AppNative {
   Vec3f translate;
   float z_distance;
   
-  
   Model model;
   Vec3f offset;
   
   double current_time;
+
+  
+  void setupCamera();
 
   
 public:
@@ -79,6 +71,34 @@ public:
 };
 
 
+// 読み込んだモデルの大きさに応じてカメラを設定する
+void AssimpApp::setupCamera() {
+  // 初期位置はモデルのAABBの中心位置とする
+  offset = -model.aabb.getCenter();
+  console() << "AABB cener:" << model.aabb.getSize() << std::endl;
+  
+  // モデルがスッポリ画面に入るようカメラ位置を調整
+  float w = model.aabb.getSize().length() / 2.0f;
+  float distance = w / std::tan(toRadians(fov / 2.0f));
+  console() << "distance:" << distance << std::endl;
+
+  z_distance = distance;
+
+  rotate     = Quatf::identity();
+  translate  = Vec3f::zero();
+
+  // NearクリップとFarクリップを決める
+  float size = model.aabb.getSize().length();
+  
+  near_z = size * 0.01f;
+  far_z  = size * 100.0f;
+
+  camera_persp.setNearClip(near_z);
+  camera_persp.setFarClip(far_z);
+  
+}
+
+
 void AssimpApp::prepareSettings(Settings* settings) {
   // 画面サイズを変更する
   settings->setWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -96,36 +116,18 @@ void AssimpApp::setup() {
   
   // モデルデータ読み込み
   model = loadModel("miku.dae");
-  // 初期位置はモデルのAABBの中心位置とする
-  offset = -model.aabb.getCenter();
-  console() << model.aabb.getSize() << std::endl;
   
-  // models.push_back(loadModel("akatsuki_dance.dae"));
-  // offsets.push_back(Vec3f{ -2.6f, 0.0f, 0.0f });
-  // models.push_back(loadModel("ikazuchi_dance.dae"));
-  // offsets.push_back(Vec3f{ 0.0f, 0.0f, 0.0f });
-  // models.push_back(loadModel("nagatsuki_dance.dae"));
-  // offsets.push_back(Vec3f{ 2.6f, 0.0f, 0.0f });
-
   // カメラの設定
-  fov    = 35.0f;
-  near_z = 0.1f;
-  far_z  = 100.0f;
+  fov = 35.0f;
+  setupCamera();
   
   camera_persp = CameraPersp(WINDOW_WIDTH, WINDOW_HEIGHT,
                              fov,
                              near_z, far_z);
 
   camera_persp.setEyePoint(Vec3f::zero());
-  camera_persp.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1000.0f });
+  camera_persp.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
 
-  rotate     = Quatf::identity();
-  translate  = Vec3f::zero();
-
-  // モデルがスッポリ画面に入るようカメラ位置を調整
-  z_distance = getCameraDistance(model, fov);
-  console() << "z_distance:" << z_distance << std::endl;
-  
   // ライトの設定
   light = new gl::Light(gl::Light::DIRECTIONAL, 0);
   light->setAmbient(Color(0.0, 0.0, 0.0));
@@ -190,11 +192,7 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   console() << model.aabb.getSize() << std::endl;
   offset = -model.aabb.getCenter();
 
-  rotate     = Quatf::identity();
-  translate  = Vec3f::zero();
-
-  z_distance = getCameraDistance(model, fov);
-  console() << "z_distance:" << z_distance << std::endl;
+  setupCamera();
 
   touch_num = 0;
 }
@@ -236,10 +234,7 @@ void AssimpApp::keyDown(KeyEvent event) {
   int key_code = event.getCode();
 
   if (key_code == KeyEvent::KEY_r) {
-    rotate     = Quatf::identity();
-    translate  = Vec3f::zero();
-
-    z_distance = getCameraDistance(model, fov);
+    setupCamera();
 
     touch_num = 0;
   }
@@ -287,12 +282,13 @@ void AssimpApp::touchesMoved(TouchEvent event) {
   float l_prev = (v2_prev - v1_prev).length();
   float ld = l - l_prev;
 
+  // 距離に応じて比率を変える
+  float t = std::tan(fov / 2.0f) * z_distance;
+
   if (std::abs(ld) < 3.0f) {
-    translate += d * 0.005f;
+    translate -= d * t * 0.0005f;
   }
   else {
-    // 距離に応じて比率を変える
-    float t = std::tan(fov / 2.0f) * z_distance;
     z_distance = std::max(z_distance + ld * t * 0.001f, 0.01f);
   }
 }
@@ -322,9 +318,9 @@ void AssimpApp::draw() {
 
   gl::translate(Vec3f(0, 0.0, -z_distance));
 
-  gl::translate(translate);
   // FIXME:CinderのQuatfをOpenGLに渡す実装がよくない
   gl::multModelView(rotate.toMatrix44());
+  gl::translate(translate);
 
   gl::translate(offset);
   drawModel(model);
