@@ -42,7 +42,7 @@ class AssimpApp : public AppNative {
   gl::Light* light;
 
   Vec2i mouse_prev_pos;
-  size_t touch_num;
+  int touch_num;
   
   Quatf rotate;
   Vec3f translate;
@@ -302,7 +302,8 @@ void AssimpApp::touchesMoved(TouchEvent event) {
 void AssimpApp::touchesEnded(TouchEvent event) {
   const auto& touches = event.getTouches();
 
-  touch_num -= touches.size();
+  // 最悪マイナス値にならないよう
+  touch_num = std::max(touch_num - int(touches.size()), 0);
 }
 
 
