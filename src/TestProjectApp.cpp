@@ -46,12 +46,14 @@ class AssimpApp : public AppNative {
   
 public:
   void prepareSettings(Settings* settings);
-
   
   void setup();
   void shutdown();
+
   void resize();
 
+  void fileDrop(FileDropEvent event);
+  
   void mouseDown(MouseEvent event);
   void mouseDrag(MouseEvent event);
   
@@ -106,8 +108,8 @@ void AssimpApp::setup() {
 #endif
   
   // モデルデータ読み込み
-  model = loadModel("astroboy_walk.dae");
-  // model = loadModel("mikuonndo.dae");
+  // model = loadModel("astroboy_walk.dae");
+  model = loadModel("mikuonndo.dae");
   // model = loadModel("miku.dae");
 
   rotate     = Quatf::identity();
@@ -152,6 +154,16 @@ void AssimpApp::resize() {
   }
 }
 
+
+void AssimpApp::fileDrop(FileDropEvent event) {
+  const auto& path = event.getFiles();
+
+  console() << path[0].filename() << std::endl;
+
+  model = loadModel(path[0].filename().string());
+}
+
+
 void AssimpApp::mouseDown(MouseEvent event) {
   if (touch_num > 1) return;
   
@@ -194,8 +206,26 @@ void AssimpApp::touchesMoved(TouchEvent event) {
 //  if (touch_num < 2) return;
   
   const auto& touches = event.getTouches();
-  if (touches.size() < 2) return;
 
+#if defined (CINDER_COCOA_TOUCH)
+  if (touch_num == 1) {
+    Vec2f d{ touches[0].getPos() -  touches[0].getPrevPos() };
+    float l = d.length();
+    if (l > 0.0f) {
+      d.normalize();
+
+      Vec3f v1{   d.x, -d.y, 0.0f };
+      Vec3f v2{ -v1.y, v1.x, 0.0f };
+
+      Quatf r{ v2, l * 0.01f };
+      rotate = rotate * r;
+    }
+    
+    return;
+  }
+#endif
+  if (touches.size() < 2) return;
+  
   Vec3f v1{ touches[0].getX(), -touches[0].getY(), 0.0f };
   Vec3f v1_prev{ touches[0].getPrevX(), -touches[0].getPrevY(), 0.0f };
   Vec3f v2{ touches[1].getX(), -touches[1].getY(), 0.0f };
