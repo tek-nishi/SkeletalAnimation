@@ -47,7 +47,6 @@ class AssimpApp : public AppNative {
   Quatf rotate;
   Vec3f translate;
   float z_distance;
-  float scale;
   
   
   Model model;
@@ -122,7 +121,6 @@ void AssimpApp::setup() {
 
   rotate     = Quatf::identity();
   translate  = Vec3f::zero();
-  scale      = 1.0f;
 
   // モデルがスッポリ画面に入るようカメラ位置を調整
   z_distance = getCameraDistance(model, fov);
@@ -194,7 +192,6 @@ void AssimpApp::fileDrop(FileDropEvent event) {
 
   rotate     = Quatf::identity();
   translate  = Vec3f::zero();
-  scale      = 1.0f;
 
   z_distance = getCameraDistance(model, fov);
   console() << "z_distance:" << z_distance << std::endl;
@@ -241,7 +238,6 @@ void AssimpApp::keyDown(KeyEvent event) {
   if (key_code == KeyEvent::KEY_r) {
     rotate     = Quatf::identity();
     translate  = Vec3f::zero();
-    scale      = 1.0f;
 
     z_distance = getCameraDistance(model, fov);
 
@@ -295,7 +291,9 @@ void AssimpApp::touchesMoved(TouchEvent event) {
     translate += d * 0.005f;
   }
   else {
-    scale = std::max(scale + ld * 0.001f, 0.01f);
+    // 距離に応じて比率を変える
+    float t = std::tan(fov / 2.0f) * z_distance;
+    z_distance = std::max(z_distance + ld * t * 0.001f, 0.01f);
   }
 }
 
@@ -327,7 +325,6 @@ void AssimpApp::draw() {
   gl::translate(translate);
   // FIXME:CinderのQuatfをOpenGLに渡す実装がよくない
   gl::multModelView(rotate.toMatrix44());
-  gl::scale(Vec3f(scale, scale, scale));
 
   gl::translate(offset);
   drawModel(model);
