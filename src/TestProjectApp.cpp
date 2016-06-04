@@ -6,6 +6,7 @@
 #include "cinder/gl/gl.h"
 #include "cinder/gl/Light.h"
 #include "cinder/Camera.h"
+#include "cinder/Arcball.h"
 
 #include "model.hpp"
 
@@ -28,13 +29,20 @@ class AssimpApp : public AppNative {
   float near_z;
 
   gl::Light* light;
-  
-  float rotate;
 
+  Vec2i mouse_prev_pos;
+  size_t touch_num;
+  
+  Quatf rotate;
+  Vec3f translate;
+  float z_distance;
+  float scale;
+  
+  
   Model model;
   
   double current_time;
-  
+
   
 public:
   void prepareSettings(Settings* settings);
@@ -43,6 +51,13 @@ public:
   void setup();
   void shutdown();
   void resize();
+
+  void mouseDown(MouseEvent event);
+  void mouseDrag(MouseEvent event);
+  
+  void touchesBegan(TouchEvent event);
+  void touchesMoved(TouchEvent event);
+  void touchesEnded(TouchEvent event);
   
   void update();
   void draw();
@@ -52,14 +67,18 @@ public:
 void AssimpApp::prepareSettings(Settings* settings) {
   // 画面サイズを変更する
   settings->setWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+
+  // マルチタッチ有効
+  touch_num = 0;
+  settings->enableMultiTouch();
 }
 
 void AssimpApp::setup() {
 #if defined (CINDER_COCOA_TOUCH)
-    // 縦横画面両対応
-    getSignalSupportedOrientations().connect([]() { return ci::app::InterfaceOrientation::All; });
+  // 縦横画面両対応
+  getSignalSupportedOrientations().connect([]() { return ci::app::InterfaceOrientation::All; });
 #endif
-    
+  
   fov    = 35.0f;
   near_z = 1.0f;
   
@@ -86,12 +105,16 @@ void AssimpApp::setup() {
   glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #endif
   
-  rotate = 0.0f;
-
   // モデルデータ読み込み
-  // model = loadModel("astroboy_walk.dae");
-  model = loadModel("mikuonndo.dae");
+  model = loadModel("astroboy_walk.dae");
+  // model = loadModel("mikuonndo.dae");
+  // model = loadModel("miku.dae");
 
+  rotate     = Quatf::identity();
+  translate  = Vec3f::zero();
+  z_distance = 2.0f;
+  scale      = 1.0f;
+  
   current_time = 0.0;
   
   gl::enableDepthRead();
@@ -129,6 +152,75 @@ void AssimpApp::resize() {
   }
 }
 
+void AssimpApp::mouseDown(MouseEvent event) {
+  if (touch_num > 1) return;
+  
+  if (event.isLeft()) {
+    // TIPS:マウスとワールド座標で縦方向の向きが逆
+    auto pos = event.getPos();
+    mouse_prev_pos = pos;
+  }
+}
+
+void AssimpApp::mouseDrag(MouseEvent event) {
+  if (touch_num > 1) return;
+
+  if (event.isLeftDown()) {
+    auto mouse_pos = event.getPos();
+    Vec2f d{ mouse_pos - mouse_prev_pos };
+    float l = d.length();
+    if (l > 0.0f) {
+      d.normalize();
+
+      Vec3f v1{   d.x, -d.y, 0.0f };
+      Vec3f v2{ -v1.y, v1.x, 0.0f };
+
+      Quatf r{ v2, l * 0.01f };
+      rotate = rotate * r;
+    }
+    
+    mouse_prev_pos = mouse_pos;
+  }
+}
+
+
+void AssimpApp::touchesBegan(TouchEvent event) {
+  const auto& touches = event.getTouches();
+
+  touch_num += touches.size();
+}
+
+void AssimpApp::touchesMoved(TouchEvent event) {
+//  if (touch_num < 2) return;
+  
+  const auto& touches = event.getTouches();
+  if (touches.size() < 2) return;
+
+  Vec3f v1{ touches[0].getX(), -touches[0].getY(), 0.0f };
+  Vec3f v1_prev{ touches[0].getPrevX(), -touches[0].getPrevY(), 0.0f };
+  Vec3f v2{ touches[1].getX(), -touches[1].getY(), 0.0f };
+  Vec3f v2_prev{ touches[1].getPrevX(), -touches[1].getPrevY(), 0.0f };
+
+  Vec3f d = v1 - v1_prev;
+
+  float l = (v2 - v1).length();
+  float l_prev = (v2_prev - v1_prev).length();
+  float ld = l - l_prev;
+
+  if (std::abs(ld) < 2.0f) {
+    translate += d * 0.005f;
+  }
+  else {
+    scale = std::max(scale + ld * 0.001f, 0.01f);
+  }
+}
+
+void AssimpApp::touchesEnded(TouchEvent event) {
+  const auto& touches = event.getTouches();
+
+  touch_num -= touches.size();
+}
+
 
 void AssimpApp::update() {
   updateModel(model, current_time, 0);
@@ -144,12 +236,13 @@ void AssimpApp::draw() {
   gl::enable(GL_LIGHTING);
   light->enable();
 
-  gl::translate(Vec3f(0, -0.7, -2));
-  gl::rotate(Vec3f(0, 15, 0));
-  // gl::rotate(Vec3f(0, rotate, 0));
-  gl::scale(Vec3f(3.0, 3.0, 3.0));
-  // gl::scale(Vec3f(10.0, 10.0, 10.0));
+  gl::translate(Vec3f(0, 0.0, -z_distance));
 
+  // FIXME:CinderのQuatfをOpenGLに渡す実装がよくない
+  gl::multModelView(rotate.toMatrix44());
+  gl::translate(translate);
+  gl::scale(Vec3f(scale, scale, scale));
+  
   drawModel(model);
   
   light->disable();
