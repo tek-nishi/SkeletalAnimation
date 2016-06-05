@@ -111,6 +111,9 @@ void AssimpApp::setup() {
   // 縦横画面両対応
   getSignalSupportedOrientations().connect([]() { return ci::app::InterfaceOrientation::All; });
 #endif
+
+  // アクティブになった時にタッチ情報を初期化
+  getSignalDidBecomeActive().connect([this](){ touch_num = 0; });
   
   // モデルデータ読み込み
   model = loadModel("miku.dae");
