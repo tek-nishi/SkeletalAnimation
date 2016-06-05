@@ -40,8 +40,11 @@ class AssimpApp : public AppNative {
   
   Model model;
   Vec3f offset;
+
+  double prev_elapsed_time;
   
-  double animation_begin_time;
+  bool do_animetion;
+  double current_animation_time;
 
   
   float getVerticalFov();
@@ -118,8 +121,6 @@ void AssimpApp::setupCamera() {
 
   camera_persp.setNearClip(near_z);
   camera_persp.setFarClip(far_z);
-  
-  animation_begin_time = 0.0f;
 }
 
 
@@ -143,6 +144,11 @@ void AssimpApp::setup() {
   
   // モデルデータ読み込み
   model = loadModel("miku.dae");
+
+  prev_elapsed_time = 0.0;
+  
+  do_animetion = true;
+  current_animation_time = 0.0f;
   
   // カメラの設定
   fov = 35.0f;
@@ -201,7 +207,7 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   offset = -model.aabb.getCenter();
 
   setupCamera();
-  animation_begin_time = getElapsedSeconds();
+  current_animation_time = 0.0;
   touch_num = 0;
 }
 
@@ -240,11 +246,19 @@ void AssimpApp::mouseDrag(MouseEvent event) {
 
 void AssimpApp::keyDown(KeyEvent event) {
   int key_code = event.getCode();
+  switch (key_code) {
+  case KeyEvent::KEY_r:
+    {
+      setupCamera();
+      touch_num = 0;
+      break;
+    }
 
-  if (key_code == KeyEvent::KEY_r) {
-    setupCamera();
-
-    touch_num = 0;
+  case KeyEvent::KEY_SPACE:
+    {
+      do_animetion = !do_animetion; 
+      break;
+    }
   }
 }
 
@@ -310,9 +324,15 @@ void AssimpApp::touchesEnded(TouchEvent event) {
 
 
 void AssimpApp::update() {
-  double current_time = getElapsedSeconds() - animation_begin_time;
+  double elapsed_time = getElapsedSeconds();
+  double delta_time = elapsed_time - prev_elapsed_time;
   
-  updateModel(model, current_time, 0);
+  if (do_animetion) {
+    current_animation_time += delta_time;
+    updateModel(model, current_animation_time, 0);
+  }
+
+  prev_elapsed_time = elapsed_time;
 }
 
 void AssimpApp::draw() {
