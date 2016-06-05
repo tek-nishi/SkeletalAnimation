@@ -4,16 +4,17 @@
 // assimpによるモデル読み込み
 //
 
-#include "cinder/Matrix44.h"
-#include "cinder/TriMesh.h"
-#include "cinder/gl/Material.h"
-#include "cinder/gl/Texture.h"
-#include "cinder/ImageIo.h"
-#include "cinder/AxisAlignedBox.h"
+#include <cinder/Matrix44.h>
+#include <cinder/TriMesh.h>
+#include <cinder/gl/Material.h>
+#include <cinder/gl/Texture.h>
+#include <cinder/ImageIo.h>
+#include <cinder/AxisAlignedBox.h>
+#include <cinder/ip/Resize.h>
 
-#include "assimp/Importer.hpp"      // C++ importer interface
-#include "assimp/scene.h"           // Output data structure
-#include "assimp/postprocess.h"     // Post processing flags
+#include <assimp/Importer.hpp>      // C++ importer interface
+#include <assimp/scene.h>           // Output data structure
+#include <assimp/postprocess.h>     // Post processing flags
 
 
 // ライブラリ読み込み指定
@@ -318,6 +319,20 @@ Material createMaterial(const aiMaterial* const mat) {
   return material;
 }
 
+
+// 切り上げて一番近い２のべき乗値を求める
+int int2pow(const int value) {
+	int res = 1;
+
+	while (res < (1 << 30)) {
+		if (res >= value) break;
+		res *= 2;
+	}
+
+	return res;
+}
+
+
 // テクスチャを読み込む
 std::map<std::string, ci::gl::TextureRef> loadTexrture(const Model& model) {
   std::map<std::string, ci::gl::TextureRef> textures;
@@ -327,13 +342,28 @@ std::map<std::string, ci::gl::TextureRef> loadTexrture(const Model& model) {
 
     if (!model.textures.count(mat.texture_name)) {
 #if defined (USE_FULL_PATH)
-      auto image_ref = ci::loadImage(model.directory + "/" + mat.texture_name);
+      ci::Surface surface = ci::loadImage(model.directory + "/" + mat.texture_name);
 #else
-      auto image_ref = ci::loadImage(ci::app::loadAsset(mat.texture_name));
+      ci::Surface surface = ci::loadImage(ci::app::loadAsset(mat.texture_name));
 #endif
+
+      // サイズが２のべき乗でなければ変換
+      int w = surface.getWidth();
+      int h = surface.getHeight();
+      int pow_w = int2pow(w);
+      int pow_h = int2pow(h);
+
+      // 大きなサイズのテクスチャは禁止
+      assert((pow_w <= 2048) && (pow_h <= 2048));
+      
+      if ((w != pow_w) || (h != pow_h)) {
+        // リサイズ
+        surface = ci::ip::resizeCopy(surface, ci::Area{0, 0, w - 1, h - 1}, ci::Vec2i{pow_w, pow_h});
+        ci::app::console() << "Texture resize: " << w << "," << h << " -> " << pow_w << "," << pow_h << std::endl;
+      }
       
       textures.insert(std::make_pair(mat.texture_name,
-                                     ci::gl::Texture::create(image_ref)));
+                                     ci::gl::Texture::create(surface)));
     }
   }
   
