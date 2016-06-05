@@ -41,7 +41,7 @@ class AssimpApp : public AppNative {
   Model model;
   Vec3f offset;
   
-  double current_time;
+  double animation_begin_time;
 
   
   void setupCamera();
@@ -75,12 +75,10 @@ public:
 void AssimpApp::setupCamera() {
   // 初期位置はモデルのAABBの中心位置とする
   offset = -model.aabb.getCenter();
-  console() << "AABB cener:" << model.aabb.getSize() << std::endl;
   
   // モデルがスッポリ画面に入るようカメラ位置を調整
   float w = model.aabb.getSize().length() / 2.0f;
   float distance = w / std::tan(toRadians(fov / 2.0f));
-  console() << "distance:" << distance << std::endl;
 
   z_distance = distance;
 
@@ -89,13 +87,13 @@ void AssimpApp::setupCamera() {
 
   // NearクリップとFarクリップを決める
   float size = model.aabb.getSize().length();
-  
   near_z = size * 0.01f;
   far_z  = size * 100.0f;
 
   camera_persp.setNearClip(near_z);
   camera_persp.setFarClip(far_z);
   
+  animation_begin_time = 0.0f;
 }
 
 
@@ -145,8 +143,6 @@ void AssimpApp::setup() {
   glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #endif
   
-  current_time = 0.0;
-  
   gl::enableDepthRead();
   gl::enableDepthWrite();
   gl::enableAlphaBlending();
@@ -193,7 +189,7 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   offset = -model.aabb.getCenter();
 
   setupCamera();
-
+  animation_begin_time = getElapsedSeconds();
   touch_num = 0;
 }
 
@@ -302,7 +298,7 @@ void AssimpApp::touchesEnded(TouchEvent event) {
 
 
 void AssimpApp::update() {
-  current_time = getElapsedSeconds();
+  double current_time = getElapsedSeconds() - animation_begin_time;
   
   updateModel(model, current_time, 0);
 }
