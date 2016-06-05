@@ -5,6 +5,7 @@
 #include "cinder/app/AppNative.h"
 #include "cinder/gl/gl.h"
 #include "cinder/gl/Light.h"
+#include "cinder/gl/Texture.h"
 #include "cinder/Camera.h"
 #include "cinder/Arcball.h"
 
@@ -24,6 +25,7 @@ class AssimpApp : public AppNative {
   // 投影変換をおこなうカメラを定義
   // 透視投影（Perspective）
   CameraPersp camera_persp;
+  CameraOrtho camera_ui; 
 
   float fov;
   float near_z;
@@ -46,9 +48,12 @@ class AssimpApp : public AppNative {
   bool do_animetion;
   bool no_animation;
   double current_animation_time;
+  double animation_speed;
 
   bool do_disp_grid;
   float grid_scale;
+
+  gl::Texture bg_image;
   
   
   float getVerticalFov();
@@ -179,6 +184,7 @@ void AssimpApp::setup() {
   do_animetion = true;
   no_animation = false;
   current_animation_time = 0.0f;
+  animation_speed = 1.0f;
 
   do_disp_grid = true;
   grid_scale = 1.0f;
@@ -194,6 +200,11 @@ void AssimpApp::setup() {
   camera_persp.setEyePoint(Vec3f::zero());
   camera_persp.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
 
+  // UI用カメラ
+  camera_ui = CameraOrtho(0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 5.0f);
+  camera_ui.setEyePoint(Vec3f::zero());
+  camera_ui.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
+  
   // ライトの設定
   light = new gl::Light(gl::Light::DIRECTIONAL, 0);
   light->setAmbient(Color(0.0, 0.0, 0.0));
@@ -210,9 +221,10 @@ void AssimpApp::setup() {
   // TIPS:これで、テクスチャを張ったポリゴンもキラーン!!ってなる
   glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #endif
+
+  bg_image = loadImage(loadAsset("bg.png"));
+
   
-  gl::enableDepthRead();
-  gl::enableDepthWrite();
   gl::enableAlphaBlending();
   
   gl::enable(GL_CULL_FACE);
@@ -284,6 +296,10 @@ void AssimpApp::keyDown(KeyEvent event) {
   switch (key_code) {
   case KeyEvent::KEY_r:
     {
+      animation_speed = 1.0;
+      do_animetion = true;
+      no_animation = false;
+      
       setupCamera();
       touch_num = 0;
     }
@@ -309,6 +325,22 @@ void AssimpApp::keyDown(KeyEvent event) {
       do_disp_grid = !do_disp_grid;
     }
     break;
+
+  case KeyEvent::KEY_PERIOD:
+    {
+      animation_speed = std::min(animation_speed * 1.25, 10.0);
+      console() << "speed:" << animation_speed << std::endl;
+    }
+    break;
+
+  case KeyEvent::KEY_COMMA:
+    {
+      animation_speed = std::max(animation_speed * 0.95, 0.1);
+      console() << "speed:" << animation_speed << std::endl;
+    }
+    break;
+
+
   }
 }
 
@@ -378,7 +410,7 @@ void AssimpApp::update() {
   double delta_time = elapsed_time - prev_elapsed_time;
   
   if (do_animetion && !no_animation) {
-    current_animation_time += delta_time;
+    current_animation_time += delta_time * animation_speed;
     updateModel(model, current_animation_time, 0);
   }
 
@@ -386,10 +418,26 @@ void AssimpApp::update() {
 }
 
 void AssimpApp::draw() {
-  
   gl::clear(Color(0.3, 0.3, 0.3));
 
+  // 背景描画
+  gl::setMatrices(camera_ui);
+
+  gl::disableDepthRead();
+  gl::disableDepthWrite();
+  
+  gl::translate(0.0f, 0.0f, -2.0f);
+
+  bg_image.enableAndBind();
+  gl::color(Color(0.7f, 0.7f, 0.7f));
+  gl::drawSolidRect(Rectf(0.0f, 0.0f, 1.0f, 1.0f));
+  bg_image.unbind();
+  bg_image.disable();
+
+  // モデル描画
   gl::setMatrices(camera_persp);
+  gl::enableDepthRead();
+  gl::enableDepthWrite();
 
   gl::enable(GL_LIGHTING);
   light->enable();
