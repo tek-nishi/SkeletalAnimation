@@ -29,7 +29,7 @@
 // ウェイト値が小さすぎる場合への対処
 #define WEIGHT_WORKAROUND
 // フルパス指定
-// #define USE_FULL_PATH
+#define USE_FULL_PATH
 
 
 #include <map>

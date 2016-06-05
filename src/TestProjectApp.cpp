@@ -383,10 +383,10 @@ void AssimpApp::draw() {
   light->enable();
 
   gl::translate(Vec3f(0, 0.0, -z_distance));
+  gl::translate(translate);
 
   // FIXME:CinderのQuatfをOpenGLに渡す実装がよくない
   gl::multModelView(rotate.toMatrix44());
-  gl::translate(translate);
 
   gl::translate(offset);
   drawModel(model);
