@@ -305,7 +305,7 @@ Material createMaterial(const aiMaterial* const mat) {
     material.has_texture  = true;
     material.texture_name = getFilename(std::string(tex_name.C_Str()));
   }
-      
+
   ci::app::console() << "Diffuse:"   << material.body.getDiffuse()   << std::endl;
   ci::app::console() << "Ambient:"   << material.body.getAmbient()   << std::endl;
   ci::app::console() << "Specular:"  << material.body.getSpecular()  << std::endl;

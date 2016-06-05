@@ -53,6 +53,8 @@ class AssimpApp : public AppNative {
   bool do_disp_grid;
   float grid_scale;
 
+  bool two_sided;
+  
   gl::Texture bg_image;
   
   
@@ -224,6 +226,7 @@ void AssimpApp::setup() {
 
   bg_image = loadImage(loadAsset("bg.png"));
 
+  two_sided = false;
   
   gl::enableAlphaBlending();
   
@@ -328,6 +331,15 @@ void AssimpApp::keyDown(KeyEvent event) {
       do_disp_grid = !do_disp_grid;
     }
     break;
+
+  case KeyEvent::KEY_f:
+    {
+      two_sided = !two_sided;
+      two_sided ? gl::disable(GL_CULL_FACE)
+                : gl::enable(GL_CULL_FACE);
+    }
+    break;
+    
 
   case KeyEvent::KEY_PERIOD:
     {
