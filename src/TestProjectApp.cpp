@@ -17,8 +17,8 @@ using namespace ci::app;
 
 class AssimpApp : public AppNative {
   enum {
-    WINDOW_WIDTH  = 800,
-    WINDOW_HEIGHT = 600,
+    WINDOW_WIDTH  = 600,
+    WINDOW_HEIGHT = 800,
   };
   
   // 投影変換をおこなうカメラを定義
@@ -44,6 +44,7 @@ class AssimpApp : public AppNative {
   double animation_begin_time;
 
   
+  float getVerticalFov();
   void setupCamera();
 
   
@@ -69,6 +70,31 @@ public:
   void update();
   void draw();
 };
+
+
+// 垂直方向の視野角を計算する
+//   縦長画面の場合は画面の縦横比から求める
+float AssimpApp::getVerticalFov() {
+  float aspect = ci::app::getWindowAspectRatio();
+  camera_persp.setAspectRatio(aspect);
+  
+  if (aspect < 1.0) {
+    // 画面が縦長になったら、幅基準でfovを求める
+    // fovとnear_zから投影面の幅の半分を求める
+    float half_w = std::tan(ci::toRadians(fov / 2)) * near_z;
+
+    // 表示画面の縦横比から、投影面の高さの半分を求める
+    float half_h = half_w / aspect;
+
+    // 投影面の高さの半分とnear_zから、fovが求まる
+    return toDegrees(std::atan(half_h / near_z) * 2);
+  }
+  else {
+    // 横長の場合、fovは固定
+    return fov;
+  }
+}
+
 
 
 // 読み込んだモデルの大きさに応じてカメラを設定する
@@ -122,7 +148,7 @@ void AssimpApp::setup() {
   fov = 35.0f;
   setupCamera();
   
-  camera_persp = CameraPersp(WINDOW_WIDTH, WINDOW_HEIGHT,
+  camera_persp = CameraPersp(getWindowWidth(), getWindowHeight(),
                              fov,
                              near_z, far_z);
 
@@ -160,25 +186,8 @@ void AssimpApp::shutdown() {
 
 
 void AssimpApp::resize() {
-  float aspect = ci::app::getWindowAspectRatio();
-  camera_persp.setAspectRatio(aspect);
-  
-  if (aspect < 1.0) {
-    // 画面が縦長になったら、幅基準でfovを求める
-    // fovとnear_zから投影面の幅の半分を求める
-    float half_w = std::tan(ci::toRadians(fov / 2)) * near_z;
-
-    // 表示画面の縦横比から、投影面の高さの半分を求める
-    float half_h = half_w / aspect;
-
-    // 投影面の高さの半分とnear_zから、fovが求まる
-    float new_fov = std::atan(half_h / near_z) * 2;
-    camera_persp.setFov(ci::toDegrees(new_fov));
-  }
-  else {
-    // 横長の場合、fovは固定
-    camera_persp.setFov(fov);
-  }
+  camera_persp.setFov(getVerticalFov());
+  touch_num = 0;
 }
 
 
