@@ -44,11 +44,11 @@ class AssimpApp : public AppNative {
   double prev_elapsed_time;
   
   bool do_animetion;
+  bool no_animation;
   double current_animation_time;
 
   bool do_disp_grid;
   float grid_scale;
-
   
   
   float getVerticalFov();
@@ -177,6 +177,7 @@ void AssimpApp::setup() {
   prev_elapsed_time = 0.0;
   
   do_animetion = true;
+  no_animation = false;
   current_animation_time = 0.0f;
 
   do_disp_grid = true;
@@ -238,6 +239,8 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   console() << model.aabb.getSize() << std::endl;
   offset = -model.aabb.getCenter();
 
+  if (no_animation) resetModelNodes(model);
+  
   setupCamera();
   current_animation_time = 0.0;
   touch_num = 0;
@@ -292,11 +295,20 @@ void AssimpApp::keyDown(KeyEvent event) {
     }
     break;
 
-    case KeyEvent::KEY_g:
-      {
-        do_disp_grid = !do_disp_grid;
+  case KeyEvent::KEY_a:
+    {
+      no_animation = !no_animation;
+      if (no_animation) {
+        resetModelNodes(model);
       }
-      break;
+    }
+    break;
+    
+  case KeyEvent::KEY_g:
+    {
+      do_disp_grid = !do_disp_grid;
+    }
+    break;
   }
 }
 
@@ -365,7 +377,7 @@ void AssimpApp::update() {
   double elapsed_time = getElapsedSeconds();
   double delta_time = elapsed_time - prev_elapsed_time;
   
-  if (do_animetion) {
+  if (do_animetion && !no_animation) {
     current_animation_time += delta_time;
     updateModel(model, current_animation_time, 0);
   }

@@ -84,6 +84,7 @@ struct Node {
   std::vector<Mesh> mesh;
   
   ci::Matrix44f matrix;
+  ci::Matrix44f matrix_orig;
   ci::Matrix44f global_matrix;
   ci::Matrix44f invert_matrix;
 
@@ -420,6 +421,8 @@ std::shared_ptr<Node> createNode(const aiNode* const n, aiMesh** mesh) {
     node->mesh.push_back(createMesh(mesh[n->mMeshes[i]]));
   }
   node->matrix.set(n->mTransformation[0], true);
+  // 初期値を保存しておく
+  node->matrix_orig = node->matrix;
 
   for (u_int i = 0; i < n->mNumChildren; ++i) {
     node->children.push_back(createNode(n->mChildren[i], mesh));
@@ -741,6 +744,26 @@ void updateModel(Model& model, const double time, const size_t index) {
 
   // メッシュアニメーションを適用
   updateMesh(model);
+}
+
+// 全頂点を元に戻す
+void resetMesh(Model& model) {
+  for (const auto& node : model.node_list) {
+    for (auto& mesh : node->mesh) {
+      if (!mesh.has_bone) continue;
+
+      mesh.body = mesh.orig;
+    }
+  }
+}
+
+// ノードの行列をリセット
+void resetModelNodes(Model& model) {
+  for (const auto& node : model.node_list) {
+    node->matrix = node->matrix_orig;
+  }
+  
+  resetMesh(model);
 }
 
 // 再帰で全ノードを描画
