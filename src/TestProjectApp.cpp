@@ -244,13 +244,16 @@ void AssimpApp::resize() {
 
 void AssimpApp::fileDrop(FileDropEvent event) {
   const auto& path = event.getFiles();
-
-  console() << path[0] << std::endl;
+  console() << "Load: " << path[0] << std::endl;
 
   model = loadModel(path[0].string());
-  console() << model.aabb.getSize() << std::endl;
+
+  // 読み込んだモデルがなんとなく中心に表示されるよう調整
   offset = -model.aabb.getCenter();
 
+  // FIXME:モデルのAABBを計算する時にアニメーションを適用している
+  //       そのままだとアニメーションの情報が残ってしまっているので
+  //       一旦リセット
   if (no_animation) resetModelNodes(model);
   
   setupCamera();
@@ -407,7 +410,7 @@ void AssimpApp::touchesEnded(TouchEvent event) {
 
 void AssimpApp::update() {
   double elapsed_time = getElapsedSeconds();
-  double delta_time = elapsed_time - prev_elapsed_time;
+  double delta_time   = elapsed_time - prev_elapsed_time;
   
   if (do_animetion && !no_animation) {
     current_animation_time += delta_time * animation_speed;
