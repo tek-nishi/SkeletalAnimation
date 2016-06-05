@@ -25,8 +25,12 @@
 #endif
 #endif
 
+
 // ウェイト値が小さすぎる場合への対処
 #define WEIGHT_WORKAROUND
+// フルパス指定
+// #define USE_FULL_PATH
+
 
 #include <map>
 #include <set>
@@ -130,6 +134,11 @@ struct Model {
   std::vector<Anim> animation;
 
   ci::AxisAlignedBox3f aabb;
+
+#if defined (USE_FULL_PATH)
+  // 読み込みディレクトリ
+  std::string directory;
+#endif
 };
 
 
@@ -165,7 +174,7 @@ QuatKey fromAssimp(const aiQuatKey& key) {
 }
 
 
-// ぼーんの情報を作成
+// ボーンの情報を作成
 Bone createBone(const aiBone* b) {
   Bone bone;
 
@@ -316,8 +325,14 @@ std::map<std::string, ci::gl::TextureRef> loadTexrture(const Model& model) {
     if (!mat.has_texture) continue;
 
     if (!model.textures.count(mat.texture_name)) {
+#if defined (USE_FULL_PATH)
+      auto image_ref = ci::loadImage(model.directory + "/" + mat.texture_name);
+#else
+      auto image_ref = ci::loadImage(ci::app::loadAsset(mat.texture_name));
+#endif
+      
       textures.insert(std::make_pair(mat.texture_name,
-                                     ci::gl::Texture::create(ci::loadImage(ci::app::loadAsset(mat.texture_name)))));
+                                     ci::gl::Texture::create(image_ref)));
     }
   }
   
@@ -535,13 +550,19 @@ ci::AxisAlignedBox3f calcAABB(Model& model) {
 Model loadModel(const std::string& path) {
   Assimp::Importer importer;
 
-  const aiScene* scene = importer.ReadFile(ci::app::getAssetPath(path).string(), 
+  const aiScene* scene = importer.ReadFile(path, 
                                            aiProcess_Triangulate
                                            | aiProcess_FlipUVs
                                            | aiProcess_RemoveRedundantMaterials);
 
   Model model;
-  
+
+#if defined (USE_FULL_PATH)
+  // ファイルの親ディレクトリを取得
+  ci::fs::path full_path{ path };
+  model.directory = full_path.parent_path().string();
+#endif
+    
   if (scene->HasMaterials()) {
     u_int num = scene->mNumMaterials;
     ci::app::console() << "Materials:" << num << std::endl;

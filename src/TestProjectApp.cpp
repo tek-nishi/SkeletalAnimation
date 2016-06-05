@@ -172,7 +172,7 @@ void AssimpApp::setup() {
   getSignalDidBecomeActive().connect([this](){ touch_num = 0; });
   
   // モデルデータ読み込み
-  model = loadModel("miku.dae");
+  model = loadModel(getAssetPath("miku.dae").string());
 
   prev_elapsed_time = 0.0;
   
@@ -232,9 +232,9 @@ void AssimpApp::resize() {
 void AssimpApp::fileDrop(FileDropEvent event) {
   const auto& path = event.getFiles();
 
-  console() << path[0].filename() << std::endl;
+  console() << path[0] << std::endl;
 
-  model = loadModel(path[0].filename().string());
+  model = loadModel(path[0].string());
   console() << model.aabb.getSize() << std::endl;
   offset = -model.aabb.getCenter();
 
