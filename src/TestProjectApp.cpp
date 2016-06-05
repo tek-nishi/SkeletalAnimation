@@ -46,9 +46,14 @@ class AssimpApp : public AppNative {
   bool do_animetion;
   double current_animation_time;
 
+  bool do_disp_grid;
+  float grid_scale;
+
+  
   
   float getVerticalFov();
   void setupCamera();
+  void drawGrid();
 
   
 public:
@@ -119,8 +124,32 @@ void AssimpApp::setupCamera() {
   near_z = size * 0.01f;
   far_z  = size * 100.0f;
 
+  // グリッドのスケールも決める
+  grid_scale = size / 5.0f;
+
   camera_persp.setNearClip(near_z);
   camera_persp.setFarClip(far_z);
+}
+
+// グリッド描画
+void AssimpApp::drawGrid() {
+  gl::lineWidth(1.0f);
+  
+  for (int x = -5; x <= 5; ++x) {
+    if (x == 0) gl::color(Color(1.0f, 0.0f, 0.0f));
+    else        gl::color(Color(0.5f, 0.5f, 0.5f));
+    
+    gl::drawLine(Vec3f{ x * grid_scale, 0.0f, -5.0f * grid_scale }, Vec3f{ x * grid_scale, 0.0f, 5.0f * grid_scale });
+  }
+  for (int z = -5; z <= 5; ++z) {
+    if (z == 0) gl::color(Color(0.0f, 0.0f, 1.0f));
+    else        gl::color(Color(0.5f, 0.5f, 0.5f));
+
+    gl::drawLine(Vec3f{ -5.0f * grid_scale, 0.0f, z * grid_scale }, Vec3f{ 5.0f * grid_scale, 0.0f, z * grid_scale });
+  }
+
+  gl::color(Color(0.0f, 1.0f, 0.0f));
+  gl::drawLine(Vec3f{ 0.0f, -5.0f * grid_scale, 0.0f }, Vec3f{ 0.0f, 5.0f * grid_scale, 0.0f });
 }
 
 
@@ -149,6 +178,9 @@ void AssimpApp::setup() {
   
   do_animetion = true;
   current_animation_time = 0.0f;
+
+  do_disp_grid = true;
+  grid_scale = 1.0f;
   
   // カメラの設定
   fov = 35.0f;
@@ -251,14 +283,20 @@ void AssimpApp::keyDown(KeyEvent event) {
     {
       setupCamera();
       touch_num = 0;
-      break;
     }
+    break;
 
   case KeyEvent::KEY_SPACE:
     {
       do_animetion = !do_animetion; 
-      break;
     }
+    break;
+
+    case KeyEvent::KEY_g:
+      {
+        do_disp_grid = !do_disp_grid;
+      }
+      break;
   }
 }
 
@@ -353,7 +391,10 @@ void AssimpApp::draw() {
   gl::translate(offset);
   drawModel(model);
   
+  gl::disable(GL_LIGHTING);
   light->disable();
+
+  if (do_disp_grid) drawGrid();
 }
 
 
