@@ -9,7 +9,7 @@ Assimpで読み込んだモデルデータ(アニメーション含む)をCinder
 + メッシュデータ
 + マテリアル
 + 階層アニメーション
-+ スキンアニメーション
++ スケルタルアニメーション
 + iOS対応
 
 
@@ -17,7 +17,11 @@ Assimpで読み込んだモデルデータ(アニメーション含む)をCinder
 Cinderはもとより、Assimpのインクルードファイルとライブラリファイルをプロジェクトから参照できるようにしておいてください。
 
 あと、テストデータは自前で用意してください。
- 
+
+## Attention
+Windows環境でテクスチャのファイル名に２バイト文字が含まれている場合、Assimpの当該インポーターのパス変換処理に手を入れる必要があります。
+
+
 ## Liense
 License All source code files are licensed under the MPLv2.0 license
 
