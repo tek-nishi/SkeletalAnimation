@@ -7,7 +7,9 @@
 #include <cinder/gl/Light.h>
 #include <cinder/gl/Texture.h>
 #include <cinder/Camera.h>
-#include <cinder/Arcball.h>
+#include <cinder/params/Params.h>
+#include <functional>
+#include <sstream>
 
 #include "model.hpp"
 
@@ -34,6 +36,10 @@ class AssimpApp : public AppNative {
   float far_z;
 
   gl::Light* light;
+  Color diffuse;
+  Color ambient;
+  Color specular;
+  Vec3f direction;
 
   Vec2i mouse_prev_pos;
   int touch_num;
@@ -56,13 +62,20 @@ class AssimpApp : public AppNative {
   float grid_scale;
 
   bool two_sided;
-  
+
+  Color bg_color;
   gl::Texture bg_image;
+
+  std::string settings;
+  
+	params::InterfaceGlRef params;
   
   
   float getVerticalFov();
   void setupCamera();
   void drawGrid();
+
+  void makeSettinsText();
 
   
 public:
@@ -162,6 +175,18 @@ void AssimpApp::drawGrid() {
 }
 
 
+// 現在の設定をテキスト化
+void AssimpApp::makeSettinsText() {
+  std::ostringstream str;
+
+  str << (two_sided    ? "F" : " ") << " "
+      << (do_animetion ? "A" : " ") << " "
+      << (no_animation ? "M" : " ");
+
+  settings = str.str();
+}
+
+
 void AssimpApp::prepareSettings(Settings* settings) {
   // 画面サイズを変更する
   settings->setWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -233,11 +258,16 @@ void AssimpApp::setup() {
   camera_ui.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
   
   // ライトの設定
+  ambient  = Color(0.0, 0.0, 0.0);
+  diffuse  = Color(0.9, 0.9, 0.9);
+  specular = Color(0.5, 0.5, 0.6);
+  direction = Vec3f(0, 0, 1);
+  
   light = new gl::Light(gl::Light::DIRECTIONAL, 0);
-  light->setAmbient(Color(0.0, 0.0, 0.0));
-  light->setDiffuse(Color(0.9, 0.9, 0.9));
-  light->setSpecular(Color(0.5, 0.5, 0.6));
-  light->setDirection(Vec3f(0, 0, 1));
+  light->setAmbient(ambient);
+  light->setDiffuse(diffuse);
+  light->setSpecular(specular);
+  light->setDirection(direction);
 
   // 環境光を完全に真っ暗に
   GLfloat lmodel_ambient[] = { 0.0, 0.0, 0.0, 0.0 };
@@ -249,6 +279,7 @@ void AssimpApp::setup() {
   glLightModeli(GL_LIGHT_MODEL_COLOR_CONTROL, GL_SEPARATE_SPECULAR_COLOR);
 #endif
 
+  bg_color = Color(0.7f, 0.7f, 0.7f);
   bg_image = loadImage(loadAsset("bg.png"));
 
   two_sided = false;
@@ -257,6 +288,31 @@ void AssimpApp::setup() {
   
   gl::enable(GL_CULL_FACE);
   gl::enable(GL_NORMALIZE);
+
+	// 各種パラメーター設定
+	params = params::InterfaceGl::create("Preview params", toPixels(Vec2i(200, 400)));
+
+  params->addParam("FOV", &fov).min(1.0f).max(180.0f).updateFn([this]() {
+      camera_persp.setFov(fov);
+    });
+
+  params->addSeparator();
+  
+  params->addParam("BG", &bg_color);
+
+  params->addSeparator();
+
+  params->addParam("Ambient", &ambient).updateFn([this](){ light->setAmbient(ambient); });
+  params->addParam("Diffuse", &diffuse).updateFn([this](){ light->setDiffuse(diffuse); });
+  params->addParam("Speculat", &specular).updateFn([this](){ light->setSpecular(specular); });
+  params->addParam("Direction", &direction).updateFn([this](){ light->setDirection(direction); });
+
+  params->addSeparator();
+
+  params->addParam("Speed", &animation_speed).min(0.1).max(10.0).precision(2).step(0.05);
+
+  makeSettinsText();
+  params->addParam("Settings", &settings, true);
 }
 
 void AssimpApp::shutdown() {
@@ -338,7 +394,8 @@ void AssimpApp::keyDown(KeyEvent event) {
 
   case KeyEvent::KEY_SPACE:
     {
-      do_animetion = !do_animetion; 
+      do_animetion = !do_animetion;
+      makeSettinsText();
     }
     break;
 
@@ -348,6 +405,7 @@ void AssimpApp::keyDown(KeyEvent event) {
       if (no_animation) {
         resetModelNodes(model);
       }
+      makeSettinsText();
     }
     break;
     
@@ -362,6 +420,8 @@ void AssimpApp::keyDown(KeyEvent event) {
       two_sided = !two_sided;
       two_sided ? gl::disable(GL_CULL_FACE)
                 : gl::enable(GL_CULL_FACE);
+
+      makeSettinsText();
     }
     break;
     
@@ -370,6 +430,7 @@ void AssimpApp::keyDown(KeyEvent event) {
     {
       animation_speed = std::min(animation_speed * 1.25, 10.0);
       console() << "speed:" << animation_speed << std::endl;
+      makeSettinsText();
     }
     break;
 
@@ -377,6 +438,7 @@ void AssimpApp::keyDown(KeyEvent event) {
     {
       animation_speed = std::max(animation_speed * 0.95, 0.1);
       console() << "speed:" << animation_speed << std::endl;
+      makeSettinsText();
     }
     break;
 
@@ -427,13 +489,13 @@ void AssimpApp::touchesMoved(TouchEvent event) {
   float ld = l - l_prev;
 
   // 距離に応じて比率を変える
-  float t = std::tan(fov / 2.0f) * z_distance;
+  float t = std::tan(toRadians(fov) / 2.0f) * z_distance;
 
   if (std::abs(ld) < 3.0f) {
-    translate -= d * t * 0.0005f;
+    translate += d * t * 0.005f;
   }
   else {
-    z_distance = std::max(z_distance + ld * t * 0.001f, 0.01f);
+    z_distance = std::max(z_distance - ld * t * 0.01f, 0.01f);
   }
 }
 
@@ -458,7 +520,7 @@ void AssimpApp::update() {
 }
 
 void AssimpApp::draw() {
-  gl::clear(Color(0.3, 0.3, 0.3));
+  gl::clear(Color(0.0f, 0.0f, 0.0f));
 
   // 背景描画
   gl::setMatrices(camera_ui);
@@ -469,7 +531,7 @@ void AssimpApp::draw() {
   gl::translate(0.0f, 0.0f, -2.0f);
 
   bg_image.enableAndBind();
-  gl::color(Color(0.7f, 0.7f, 0.7f));
+  gl::color(bg_color);
   gl::drawSolidRect(Rectf(0.0f, 0.0f, 1.0f, 1.0f));
   bg_image.unbind();
   bg_image.disable();
@@ -497,6 +559,8 @@ void AssimpApp::draw() {
   light->disable();
 
   if (do_disp_grid) drawGrid();
+
+	params->draw();
 }
 
 
