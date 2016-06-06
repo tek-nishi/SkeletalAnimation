@@ -117,33 +117,6 @@ struct Anim {
 };
 
 
-struct Model {
-  std::vector<Material> material;
-
-  // マテリアルからのテクスチャ参照は名前引き
-  std::map<std::string, ci::gl::TextureRef> textures;
-
-  // 親子関係にあるノード
-  std::shared_ptr<Node> node;
-
-  // 名前からノードを探す用(アニメーションで使う)
-  std::map<std::string, std::shared_ptr<Node> > node_index;
-
-  // 親子関係を解除した状態(全ノードの行列を更新する時に使う)
-  std::vector<std::shared_ptr<Node> > node_list;
-
-  bool has_anim;
-  std::vector<Anim> animation;
-
-  ci::AxisAlignedBox3f aabb;
-
-#if defined (USE_FULL_PATH)
-  // 読み込みディレクトリ
-  std::string directory;
-#endif
-};
-
-
 // assimp -> Cinder へ変換する関数群
 ci::Vec3f fromAssimp(const aiVector3D& v) {
   return ci::Vec3f{ v.x, v.y, v.z };
@@ -174,6 +147,33 @@ QuatKey fromAssimp(const aiQuatKey& key) {
   
   return v;
 }
+
+
+struct Model {
+  std::vector<Material> material;
+
+  // マテリアルからのテクスチャ参照は名前引き
+  std::map<std::string, ci::gl::TextureRef> textures;
+
+  // 親子関係にあるノード
+  std::shared_ptr<Node> node;
+
+  // 名前からノードを探す用(アニメーションで使う)
+  std::map<std::string, std::shared_ptr<Node> > node_index;
+
+  // 親子関係を解除した状態(全ノードの行列を更新する時に使う)
+  std::vector<std::shared_ptr<Node> > node_list;
+
+  bool has_anim;
+  std::vector<Anim> animation;
+
+  ci::AxisAlignedBox3f aabb;
+
+#if defined (USE_FULL_PATH)
+  // 読み込みディレクトリ
+  std::string directory;
+#endif
+};
 
 
 // ボーンの情報を作成
@@ -576,7 +576,6 @@ ci::AxisAlignedBox3f calcAABB(Model& model) {
 
   return ci::AxisAlignedBox3f(min_vtx, max_vtx);
 }
-
 
 
 // モデル読み込み

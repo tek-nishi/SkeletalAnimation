@@ -18,8 +18,8 @@ using namespace ci::app;
 
 class AssimpApp : public AppNative {
   enum {
-    WINDOW_WIDTH  = 600,
-    WINDOW_HEIGHT = 800,
+    WINDOW_WIDTH  = 800,
+    WINDOW_HEIGHT = 600,
   };
   
   // 投影変換をおこなうカメラを定義
@@ -27,6 +27,8 @@ class AssimpApp : public AppNative {
   CameraPersp camera_persp;
   CameraOrtho camera_ui; 
 
+  Matrix44f camera_matrix;
+  
   float fov;
   float near_z;
   float far_z;
@@ -39,7 +41,7 @@ class AssimpApp : public AppNative {
   Quatf rotate;
   Vec3f translate;
   float z_distance;
-  
+
   Model model;
   Vec3f offset;
 
@@ -199,8 +201,31 @@ void AssimpApp::setup() {
                              fov,
                              near_z, far_z);
 
+  camera_matrix = Matrix44f::identity();
+  
   camera_persp.setEyePoint(Vec3f::zero());
   camera_persp.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
+
+#if 0
+  if (scene.camera.size() > 0) {
+    fov    = scene.camera[0].fov;
+    near_z = scene.camera[0].near_z;
+    far_z  = scene.camera[0].far_z;
+
+    camera_matrix = scene.camera[0].matrix;
+    
+    camera_persp.lookAt(scene.camera[0].eye_pos,
+                        scene.camera[0].look_at,
+                        scene.camera[0].up);
+
+    console() << "   eye:" << scene.camera[0].eye_pos << std::endl
+              << "    at:" << scene.camera[0].look_at << std::endl
+              << "    up:" << scene.camera[0].up      << std::endl
+              << "   fov:" << scene.camera[0].fov     << std::endl
+              << "near_z:" << scene.camera[0].near_z  << std::endl
+              << " far_z:" << scene.camera[0].far_z   << std::endl;
+  }
+#endif
 
   // UI用カメラ
   camera_ui = CameraOrtho(0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 5.0f);
@@ -451,6 +476,8 @@ void AssimpApp::draw() {
 
   // モデル描画
   gl::setMatrices(camera_persp);
+  gl::multModelView(camera_matrix);
+  
   gl::enableDepthRead();
   gl::enableDepthWrite();
 
