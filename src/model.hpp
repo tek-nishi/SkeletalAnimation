@@ -342,9 +342,9 @@ std::map<std::string, ci::gl::TextureRef> loadTexrture(const Model& model) {
 
     if (!model.textures.count(mat.texture_name)) {
 #if defined (USE_FULL_PATH)
-      ci::Surface surface = ci::loadImage(model.directory + "/" + mat.texture_name);
+      ci::Surface surface = ci::loadImage(model.directory + "/" + PATH_WORKAROUND(mat.texture_name));
 #else
-      ci::Surface surface = ci::loadImage(ci::app::loadAsset(mat.texture_name));
+      ci::Surface surface = ci::loadImage(ci::app::loadAsset(PATH_WORKAROUND(mat.texture_name)));
 #endif
 
       // サイズが２のべき乗でなければ変換
