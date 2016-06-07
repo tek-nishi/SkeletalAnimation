@@ -1,6 +1,6 @@
 ﻿//
 // assimpでの読み込み
-// 
+//
 
 #include <cinder/app/AppNative.h>
 #include <cinder/gl/gl.h>
@@ -23,14 +23,14 @@ class AssimpApp : public AppNative {
     WINDOW_WIDTH  = 800,
     WINDOW_HEIGHT = 600,
   };
-  
+
   // 投影変換をおこなうカメラを定義
   // 透視投影（Perspective）
   CameraPersp camera_persp;
-  CameraOrtho camera_ui; 
+  CameraOrtho camera_ui;
 
   Matrix44f camera_matrix;
-  
+
   float fov;
   float near_z;
   float far_z;
@@ -43,7 +43,7 @@ class AssimpApp : public AppNative {
 
   Vec2i mouse_prev_pos;
   int touch_num;
-  
+
   Quatf rotate;
   Vec3f translate;
   float z_distance;
@@ -52,7 +52,7 @@ class AssimpApp : public AppNative {
   Vec3f offset;
 
   double prev_elapsed_time;
-  
+
   bool do_animetion;
   bool no_animation;
   double current_animation_time;
@@ -67,37 +67,37 @@ class AssimpApp : public AppNative {
   gl::Texture bg_image;
 
   std::string settings;
-  
+
 	params::InterfaceGlRef params;
-  
-  
+
+
   float getVerticalFov();
   void setupCamera();
   void drawGrid();
 
   void makeSettinsText();
 
-  
+
 public:
   void prepareSettings(Settings* settings);
-  
+
   void setup();
   void shutdown();
 
   void resize();
 
   void fileDrop(FileDropEvent event);
-  
+
   void mouseDown(MouseEvent event);
   void mouseDrag(MouseEvent event);
   void mouseWheel(MouseEvent event);
 
-  void keyDown(KeyEvent event);	
-  
+  void keyDown(KeyEvent event);
+
   void touchesBegan(TouchEvent event);
   void touchesMoved(TouchEvent event);
   void touchesEnded(TouchEvent event);
-  
+
   void update();
   void draw();
 };
@@ -108,7 +108,7 @@ public:
 float AssimpApp::getVerticalFov() {
   float aspect = ci::app::getWindowAspectRatio();
   camera_persp.setAspectRatio(aspect);
-  
+
   if (aspect < 1.0) {
     // 画面が縦長になったら、幅基準でfovを求める
     // fovとnear_zから投影面の幅の半分を求める
@@ -132,7 +132,7 @@ float AssimpApp::getVerticalFov() {
 void AssimpApp::setupCamera() {
   // 初期位置はモデルのAABBの中心位置とする
   offset = -model.aabb.getCenter();
-  
+
   // モデルがスッポリ画面に入るようカメラ位置を調整
   float w = model.aabb.getSize().length() / 2.0f;
   float distance = w / std::tan(toRadians(fov / 2.0f));
@@ -157,11 +157,11 @@ void AssimpApp::setupCamera() {
 // グリッド描画
 void AssimpApp::drawGrid() {
   gl::lineWidth(1.0f);
-  
+
   for (int x = -5; x <= 5; ++x) {
     if (x == 0) gl::color(Color(1.0f, 0.0f, 0.0f));
     else        gl::color(Color(0.5f, 0.5f, 0.5f));
-    
+
     gl::drawLine(Vec3f{ x * grid_scale, 0.0f, -5.0f * grid_scale }, Vec3f{ x * grid_scale, 0.0f, 5.0f * grid_scale });
   }
   for (int z = -5; z <= 5; ++z) {
@@ -207,12 +207,12 @@ void AssimpApp::setup() {
 
   // アクティブになった時にタッチ情報を初期化
   getSignalDidBecomeActive().connect([this](){ touch_num = 0; });
-  
+
   // モデルデータ読み込み
   model = loadModel(getAssetPath("miku.dae").string());
 
   prev_elapsed_time = 0.0;
-  
+
   do_animetion = true;
   no_animation = false;
   current_animation_time = 0.0f;
@@ -220,17 +220,17 @@ void AssimpApp::setup() {
 
   do_disp_grid = true;
   grid_scale = 1.0f;
-  
+
   // カメラの設定
   fov = 35.0f;
   setupCamera();
-  
+
   camera_persp = CameraPersp(getWindowWidth(), getWindowHeight(),
                              fov,
                              near_z, far_z);
 
   camera_matrix = Matrix44f::identity();
-  
+
   camera_persp.setEyePoint(Vec3f::zero());
   camera_persp.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
 
@@ -241,7 +241,7 @@ void AssimpApp::setup() {
     far_z  = scene.camera[0].far_z;
 
     camera_matrix = scene.camera[0].matrix;
-    
+
     camera_persp.lookAt(scene.camera[0].eye_pos,
                         scene.camera[0].look_at,
                         scene.camera[0].up);
@@ -259,13 +259,13 @@ void AssimpApp::setup() {
   camera_ui = CameraOrtho(0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 5.0f);
   camera_ui.setEyePoint(Vec3f::zero());
   camera_ui.setCenterOfInterestPoint(Vec3f{ 0.0f, 0.0f, -1.0f });
-  
+
   // ライトの設定
   ambient  = Color(0.0, 0.0, 0.0);
   diffuse  = Color(0.9, 0.9, 0.9);
   specular = Color(0.5, 0.5, 0.6);
   direction = Vec3f(0, 0, 1);
-  
+
   light = new gl::Light(gl::Light::DIRECTIONAL, 0);
   light->setAmbient(ambient);
   light->setDiffuse(diffuse);
@@ -286,9 +286,9 @@ void AssimpApp::setup() {
   bg_image = loadImage(loadAsset("bg.png"));
 
   two_sided = false;
-  
+
   gl::enableAlphaBlending();
-  
+
   gl::enable(GL_CULL_FACE);
   gl::enable(GL_NORMALIZE);
 
@@ -300,7 +300,7 @@ void AssimpApp::setup() {
     });
 
   params->addSeparator();
-  
+
   params->addParam("BG", &bg_color);
 
   params->addSeparator();
@@ -341,7 +341,7 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   //       そのままだとアニメーションの情報が残ってしまっているので
   //       一旦リセット
   if (no_animation) resetModelNodes(model);
-  
+
   setupCamera();
   current_animation_time = 0.0;
   touch_num = 0;
@@ -350,7 +350,7 @@ void AssimpApp::fileDrop(FileDropEvent event) {
 
 void AssimpApp::mouseDown(MouseEvent event) {
   if (touch_num > 1) return;
-  
+
   if (event.isLeft()) {
     // TIPS:マウスとワールド座標で縦方向の向きが逆
     auto pos = event.getPos();
@@ -390,7 +390,7 @@ void AssimpApp::mouseDrag(MouseEvent event) {
       Quatf r{ v2, l * 0.01f };
       rotate = rotate * r;
     }
-    
+
   }
   mouse_prev_pos = mouse_pos;
 }
@@ -414,7 +414,7 @@ void AssimpApp::keyDown(KeyEvent event) {
       animation_speed = 1.0;
       do_animetion = true;
       no_animation = false;
-      
+
       setupCamera();
       touch_num = 0;
     }
@@ -436,7 +436,7 @@ void AssimpApp::keyDown(KeyEvent event) {
       makeSettinsText();
     }
     break;
-    
+
   case KeyEvent::KEY_g:
     {
       do_disp_grid = !do_disp_grid;
@@ -452,7 +452,7 @@ void AssimpApp::keyDown(KeyEvent event) {
       makeSettinsText();
     }
     break;
-    
+
 
   case KeyEvent::KEY_PERIOD:
     {
@@ -483,7 +483,7 @@ void AssimpApp::touchesBegan(TouchEvent event) {
 
 void AssimpApp::touchesMoved(TouchEvent event) {
 //  if (touch_num < 2) return;
-  
+
   const auto& touches = event.getTouches();
 
 #if defined (CINDER_COCOA_TOUCH)
@@ -499,12 +499,12 @@ void AssimpApp::touchesMoved(TouchEvent event) {
       Quatf r{ v2, l * 0.01f };
       rotate = rotate * r;
     }
-    
+
     return;
   }
 #endif
   if (touches.size() < 2) return;
-  
+
   Vec3f v1{ touches[0].getX(), -touches[0].getY(), 0.0f };
   Vec3f v2{ touches[1].getX(), -touches[1].getY(), 0.0f };
   Vec3f v1_prev{ touches[0].getPrevX(), -touches[0].getPrevY(), 0.0f };
@@ -538,7 +538,7 @@ void AssimpApp::touchesEnded(TouchEvent event) {
 void AssimpApp::update() {
   double elapsed_time = getElapsedSeconds();
   double delta_time   = elapsed_time - prev_elapsed_time;
-  
+
   if (do_animetion && !no_animation) {
     current_animation_time += delta_time * animation_speed;
     updateModel(model, current_animation_time, 0);
@@ -555,7 +555,7 @@ void AssimpApp::draw() {
 
   gl::disableDepthRead();
   gl::disableDepthWrite();
-  
+
   gl::translate(0.0f, 0.0f, -2.0f);
 
   bg_image.enableAndBind();
@@ -567,7 +567,7 @@ void AssimpApp::draw() {
   // モデル描画
   gl::setMatrices(camera_persp);
   gl::multModelView(camera_matrix);
-  
+
   gl::enableDepthRead();
   gl::enableDepthWrite();
 
@@ -582,7 +582,7 @@ void AssimpApp::draw() {
 
   gl::translate(offset);
   drawModel(model);
-  
+
   gl::disable(GL_LIGHTING);
   light->disable();
 

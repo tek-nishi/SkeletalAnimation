@@ -46,3 +46,15 @@ std::string UTF8toCP932(const std::string& srcUTF8) {
 std::string getFilename(const std::string& path) {
   return path.substr(path.rfind('/') + 1, path.length());
 }
+
+// 切り上げて一番近い２のべき乗値を求める
+int int2pow(const int value) {
+	int res = 1;
+
+	while (res < (1 << 30)) {
+		if (res >= value) break;
+		res *= 2;
+	}
+
+	return res;
+}
