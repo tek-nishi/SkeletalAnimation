@@ -396,6 +396,9 @@ void AssimpApp::mouseDrag(MouseEvent event) {
 
 
 void AssimpApp::mouseWheel(MouseEvent event) {
+  // OSX:マルチタッチ操作の時に呼ばれる
+  if (touch_num > 1) return;
+
 	// 距離に応じて比率を変える
 	float t = std::tan(toRadians(fov) / 2.0f) * z_distance;
 	z_distance = std::max(z_distance + event.getWheelIncrement() * t * 0.5f, near_z);
