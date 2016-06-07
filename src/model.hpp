@@ -590,6 +590,7 @@ Model loadModel(const std::string& path) {
 
   const aiScene* scene = importer.ReadFile(path, 
                                            aiProcess_Triangulate
+                                           | aiProcess_SortByPType
                                            | aiProcess_FlipUVs
                                            | aiProcess_JoinIdenticalVertices
                                            | aiProcess_OptimizeMeshes 
