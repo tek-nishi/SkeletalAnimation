@@ -90,6 +90,7 @@ public:
   
   void mouseDown(MouseEvent event);
   void mouseDrag(MouseEvent event);
+  void mouseWheel(MouseEvent event);
 
   void keyDown(KeyEvent event);	
   
@@ -359,8 +360,24 @@ void AssimpApp::mouseDown(MouseEvent event) {
 void AssimpApp::mouseDrag(MouseEvent event) {
   if (touch_num > 1) return;
 
-  if (event.isLeftDown()) {
-    auto mouse_pos = event.getPos();
+  if (!event.isLeftDown()) return;
+
+  auto mouse_pos = event.getPos();
+
+  if (event.isShiftDown()) {
+	  auto d = mouse_pos - mouse_prev_pos;
+	  Vec3f v(d.x, -d.y, 0.0f);
+
+	  float t = std::tan(toRadians(fov) / 2.0f) * z_distance;
+	  translate += v * t * 0.004f;
+  }
+  else if (event.isControlDown()) {
+	  float d = mouse_pos.y - mouse_prev_pos.y;
+
+	  float t = std::tan(toRadians(fov) / 2.0f) * z_distance;
+	  z_distance = std::max(z_distance - d * t * 0.008f, near_z);
+  }
+  else {
     Vec2f d{ mouse_pos - mouse_prev_pos };
     float l = d.length();
     if (l > 0.0f) {
@@ -373,8 +390,15 @@ void AssimpApp::mouseDrag(MouseEvent event) {
       rotate = rotate * r;
     }
     
-    mouse_prev_pos = mouse_pos;
   }
+  mouse_prev_pos = mouse_pos;
+}
+
+
+void AssimpApp::mouseWheel(MouseEvent event) {
+	// 距離に応じて比率を変える
+	float t = std::tan(toRadians(fov) / 2.0f) * z_distance;
+	z_distance = std::max(z_distance + event.getWheelIncrement() * t * 0.5f, near_z);
 }
 
 
@@ -478,8 +502,8 @@ void AssimpApp::touchesMoved(TouchEvent event) {
   if (touches.size() < 2) return;
   
   Vec3f v1{ touches[0].getX(), -touches[0].getY(), 0.0f };
-  Vec3f v1_prev{ touches[0].getPrevX(), -touches[0].getPrevY(), 0.0f };
   Vec3f v2{ touches[1].getX(), -touches[1].getY(), 0.0f };
+  Vec3f v1_prev{ touches[0].getPrevX(), -touches[0].getPrevY(), 0.0f };
   Vec3f v2_prev{ touches[1].getPrevX(), -touches[1].getPrevY(), 0.0f };
 
   Vec3f d = v1 - v1_prev;
