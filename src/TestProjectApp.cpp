@@ -185,6 +185,8 @@ void AssimpApp::makeSettinsText() {
       << (no_animation ? "M" : " ");
 
   settings = str.str();
+  params->removeParam("Settings");
+  params->addParam("Settings", &settings, true);
 }
 
 
@@ -313,7 +315,6 @@ void AssimpApp::setup() {
   params->addParam("Speed", &animation_speed).min(0.1).max(10.0).precision(2).step(0.05);
 
   makeSettinsText();
-  params->addParam("Settings", &settings, true);
 }
 
 void AssimpApp::shutdown() {
@@ -426,7 +427,7 @@ void AssimpApp::keyDown(KeyEvent event) {
     }
     break;
 
-  case KeyEvent::KEY_a:
+  case KeyEvent::KEY_m:
     {
       no_animation = !no_animation;
       if (no_animation) {
