@@ -68,14 +68,20 @@ class AssimpApp : public AppNative {
 
   std::string settings;
 
+#if defined (CINDER_COCOA_TOUCH)
+  // iOS版はダイアログの実装が無い
 	params::InterfaceGlRef params;
+#endif
 
-
+  
   float getVerticalFov();
   void setupCamera();
   void drawGrid();
 
+  // ダイアログ関連
   void makeSettinsText();
+  void createDialog();
+  void drawDialog();
 
 
 public:
@@ -176,6 +182,15 @@ void AssimpApp::drawGrid() {
 }
 
 
+#if defined (CINDER_COCOA_TOUCH)
+
+// iOS版はダイアログ関連の実装が無い
+void AssimpApp::makeSettinsText() {}
+void AssimpApp::createDialog() {}
+void AssimpApp::drawDialog() {}
+
+#else
+
 // 現在の設定をテキスト化
 void AssimpApp::makeSettinsText() {
   std::ostringstream str;
@@ -189,10 +204,46 @@ void AssimpApp::makeSettinsText() {
   params->addParam("Settings", &settings, true);
 }
 
+// ダイアログ作成
+void AssimpApp::createDialog() {
+	// 各種パラメーター設定
+	params = params::InterfaceGl::create("Preview params", toPixels(Vec2i(200, 400)));
+
+  params->addParam("FOV", &fov).min(1.0f).max(180.0f).updateFn([this]() {
+      camera_persp.setFov(fov);
+    });
+
+  params->addSeparator();
+
+  params->addParam("BG", &bg_color);
+
+  params->addSeparator();
+
+  params->addParam("Ambient", &ambient).updateFn([this](){ light->setAmbient(ambient); });
+  params->addParam("Diffuse", &diffuse).updateFn([this](){ light->setDiffuse(diffuse); });
+  params->addParam("Speculat", &specular).updateFn([this](){ light->setSpecular(specular); });
+  params->addParam("Direction", &direction).updateFn([this](){ light->setDirection(direction); });
+
+  params->addSeparator();
+
+  params->addParam("Speed", &animation_speed).min(0.1).max(10.0).precision(2).step(0.05);
+
+  makeSettinsText();
+}
+
+// ダイアログ表示
+void AssimpApp::drawDialog() {
+	params->draw();
+}
+
+#endif
+
 
 void AssimpApp::prepareSettings(Settings* settings) {
   // 画面サイズを変更する
   settings->setWindowSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+  // Retinaディスプレイ有効
+  settings->enableHighDensityDisplay();
 
   // マルチタッチ有効
   touch_num = 0;
@@ -209,7 +260,7 @@ void AssimpApp::setup() {
   getSignalDidBecomeActive().connect([this](){ touch_num = 0; });
 
   // モデルデータ読み込み
-  model = loadModel(getAssetPath("miku.dae").string());
+  model = loadModel(getAssetPath("miku_ondo.dae").string());
 
   prev_elapsed_time = 0.0;
 
@@ -287,34 +338,12 @@ void AssimpApp::setup() {
 
   two_sided = false;
 
+  // ダイアログ作成
+  createDialog();
+  
   gl::enableAlphaBlending();
-
   gl::enable(GL_CULL_FACE);
   gl::enable(GL_NORMALIZE);
-
-	// 各種パラメーター設定
-	params = params::InterfaceGl::create("Preview params", toPixels(Vec2i(200, 400)));
-
-  params->addParam("FOV", &fov).min(1.0f).max(180.0f).updateFn([this]() {
-      camera_persp.setFov(fov);
-    });
-
-  params->addSeparator();
-
-  params->addParam("BG", &bg_color);
-
-  params->addSeparator();
-
-  params->addParam("Ambient", &ambient).updateFn([this](){ light->setAmbient(ambient); });
-  params->addParam("Diffuse", &diffuse).updateFn([this](){ light->setDiffuse(diffuse); });
-  params->addParam("Speculat", &specular).updateFn([this](){ light->setSpecular(specular); });
-  params->addParam("Direction", &direction).updateFn([this](){ light->setDirection(direction); });
-
-  params->addSeparator();
-
-  params->addParam("Speed", &animation_speed).min(0.1).max(10.0).precision(2).step(0.05);
-
-  makeSettinsText();
 }
 
 void AssimpApp::shutdown() {
@@ -588,7 +617,8 @@ void AssimpApp::draw() {
 
   if (do_disp_grid) drawGrid();
 
-	params->draw();
+  // ダイアログ表示
+  drawDialog();
 }
 
 
