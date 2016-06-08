@@ -68,7 +68,7 @@ class AssimpApp : public AppNative {
 
   std::string settings;
 
-#if defined (CINDER_COCOA_TOUCH)
+#if !defined (CINDER_COCOA_TOUCH)
   // iOS版はダイアログの実装が無い
 	params::InterfaceGlRef params;
 #endif
@@ -260,7 +260,7 @@ void AssimpApp::setup() {
   getSignalDidBecomeActive().connect([this](){ touch_num = 0; });
 
   // モデルデータ読み込み
-  model = loadModel(getAssetPath("miku_ondo.dae").string());
+  model = loadModel(getAssetPath("miku.dae").string());
 
   prev_elapsed_time = 0.0;
 
