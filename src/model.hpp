@@ -283,7 +283,6 @@ Model loadModel(const std::string& path) {
 
   const aiScene* scene = importer.ReadFile(path,
                                            aiProcess_Triangulate
-                                           | aiProcess_SortByPType
                                            | aiProcess_FlipUVs
                                            | aiProcess_JoinIdenticalVertices
                                            | aiProcess_OptimizeMeshes
@@ -357,6 +356,8 @@ Model loadModel(const std::string& path) {
 // TIPS:全ノード最終的な行列が計算されているので、再帰で描画する必要は無い
 void drawModel(const Model& model) {
   for (const auto& node : model.node_list) {
+    if (node->mesh.empty()) continue;
+    
     ci::gl::pushModelView();
     ci::gl::multModelView(node->global_matrix);
 

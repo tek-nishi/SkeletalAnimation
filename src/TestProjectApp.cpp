@@ -262,7 +262,7 @@ void AssimpApp::setup() {
   getSignalDidBecomeActive().connect([this](){ touch_num = 0; });
 
   // モデルデータ読み込み
-  model = loadModel(getAssetPath("vertex_color.dae").string());
+  model = loadModel(getAssetPath("miku.dae").string());
 
   prev_elapsed_time = 0.0;
 
