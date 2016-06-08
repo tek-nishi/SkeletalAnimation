@@ -351,35 +351,28 @@ Model loadModel(const std::string& path) {
 }
 
 
-// 再帰で全ノードを描画
-void drawModel(const Model& model, const std::shared_ptr<Node>& node) {
-  ci::gl::pushModelView();
-  ci::gl::multModelView(node->matrix);
-
-  for (const auto& mesh : node->mesh) {
-    const auto& material = model.material[mesh.material_index];
-    material.body.apply();
-
-    if (material.has_texture) {
-      model.textures.at(material.texture_name)->enableAndBind();
-    }
-
-    ci::gl::draw(mesh.body);
-
-    if (material.has_texture) {
-      model.textures.at(material.texture_name)->unbind();
-      model.textures.at(material.texture_name)->disable();
-    }
-  }
-
-  for (const auto& child : node->children) {
-    drawModel(model, child);
-  }
-
-  ci::gl::popModelView();
-}
-
 // モデル描画
+// TIPS:全ノード最終的な行列が計算されているので、再帰で描画する必要は無い
 void drawModel(const Model& model) {
-  drawModel(model, model.node);
+  for (const auto& node : model.node_list) {
+    ci::gl::pushModelView();
+    ci::gl::multModelView(node->global_matrix);
+
+    for (const auto& mesh : node->mesh) {
+      const auto& material = model.material[mesh.material_index];
+      material.body.apply();
+
+      if (material.has_texture) {
+        model.textures.at(material.texture_name)->enableAndBind();
+      }
+
+      ci::gl::draw(mesh.body);
+
+      if (material.has_texture) {
+        model.textures.at(material.texture_name)->unbind();
+        model.textures.at(material.texture_name)->disable();
+      }
+    }
+    ci::gl::popModelView();
+  }
 }
