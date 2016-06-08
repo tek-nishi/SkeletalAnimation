@@ -363,7 +363,10 @@ void drawModel(const Model& model) {
       if (mesh.body.hasColorsRGBA()) {
         // 頂点カラー
         ci::gl::enable(GL_COLOR_MATERIAL);
+#if !defined (CINDER_COCOA_TOUCH)
+        // OpenGL ESは未実装
         glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+#endif
       }
       else {
         material.body.apply();
