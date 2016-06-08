@@ -289,6 +289,8 @@ Model loadModel(const std::string& path) {
                                            | aiProcess_OptimizeMeshes
                                            | aiProcess_RemoveRedundantMaterials);
 
+  assert(scene);
+  
   Model model;
 
 #if defined (USE_FULL_PATH)
