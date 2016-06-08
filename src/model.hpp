@@ -360,13 +360,24 @@ void drawModel(const Model& model) {
 
     for (const auto& mesh : node->mesh) {
       const auto& material = model.material[mesh.material_index];
-      material.body.apply();
+      if (mesh.body.hasColorsRGBA()) {
+        // 頂点カラー
+        ci::gl::enable(GL_COLOR_MATERIAL);
+        glColorMaterial(GL_FRONT_AND_BACK, GL_AMBIENT_AND_DIFFUSE);
+      }
+      else {
+        material.body.apply();
+      }
 
       if (material.has_texture) {
         model.textures.at(material.texture_name)->enableAndBind();
       }
 
       ci::gl::draw(mesh.body);
+
+      if (mesh.body.hasColorsRGBA()) {
+        ci::gl::disable(GL_COLOR_MATERIAL);
+      }
 
       if (material.has_texture) {
         model.textures.at(material.texture_name)->unbind();
