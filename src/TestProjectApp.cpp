@@ -62,6 +62,7 @@ class AssimpApp : public AppNative {
   float grid_scale;
 
   bool two_sided;
+  bool disp_reverse;
 
   Color bg_color;
   gl::Texture bg_image;
@@ -195,9 +196,10 @@ void AssimpApp::drawDialog() {}
 void AssimpApp::makeSettinsText() {
   std::ostringstream str;
 
-  str << (two_sided    ? "F" : " ") << " "
+  str << (two_sided    ? "D" : " ") << " "
       << (do_animetion ? "A" : " ") << " "
-      << (no_animation ? "M" : " ");
+      << (no_animation ? "M" : " ") << " "
+      << (disp_reverse ? "F" : " ");
 
   settings = str.str();
   params->removeParam("Settings");
@@ -337,6 +339,7 @@ void AssimpApp::setup() {
   bg_image = loadImage(loadAsset("bg.png"));
 
   two_sided = false;
+  disp_reverse = false;
 
   // ダイアログ作成
   createDialog();
@@ -374,6 +377,7 @@ void AssimpApp::fileDrop(FileDropEvent event) {
   setupCamera();
   current_animation_time = 0.0;
   touch_num = 0;
+  disp_reverse = false;
 }
 
 
@@ -472,12 +476,20 @@ void AssimpApp::keyDown(KeyEvent event) {
     }
     break;
 
-  case KeyEvent::KEY_f:
+  case KeyEvent::KEY_d:
     {
       two_sided = !two_sided;
       two_sided ? gl::disable(GL_CULL_FACE)
                 : gl::enable(GL_CULL_FACE);
 
+      makeSettinsText();
+    }
+    break;
+
+  case KeyEvent::KEY_f:
+    {
+      reverseModelNode(model);
+      disp_reverse = !disp_reverse;
       makeSettinsText();
     }
     break;

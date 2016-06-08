@@ -376,3 +376,12 @@ void drawModel(const Model& model) {
     ci::gl::popModelView();
   }
 }
+
+// 描画順を逆にする
+void reverseModelNode(Model& model) {
+  for (const auto& node : model.node_list) {
+    std::reverse(std::begin(node->mesh), std::end(node->mesh));
+  }
+  
+  std::reverse(std::begin(model.node_list), std::end(model.node_list));
+}
