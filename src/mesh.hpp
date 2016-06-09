@@ -4,6 +4,8 @@
 // メッシュ
 //
 
+#include <cinder/TriMesh.h>
+#include <cinder/Matrix44.h>
 #include <assimp/scene.h>
 #include <string>
 #include "common.hpp"

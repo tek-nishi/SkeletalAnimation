@@ -4,12 +4,7 @@
 // assimpによるモデル読み込み
 //
 
-#include <cinder/Matrix44.h>
-#include <cinder/TriMesh.h>
-#include <cinder/gl/Material.h>
-#include <cinder/ImageIo.h>
 #include <cinder/AxisAlignedBox.h>
-#include <cinder/ip/Resize.h>
 
 #include <assimp/Importer.hpp>      // C++ importer interface
 #include <assimp/scene.h>           // Output data structure

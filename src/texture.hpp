@@ -6,7 +6,9 @@
 
 #include <map>
 #include <string>
+#include <cinder/ImageIo.h>
 #include <cinder/gl/Texture.h>
+#include <cinder/ip/Resize.h>
 #include "misc.hpp"
 
 
