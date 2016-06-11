@@ -281,6 +281,7 @@ Model loadModel(const std::string& path) {
                                            | aiProcess_FlipUVs
                                            | aiProcess_JoinIdenticalVertices
                                            | aiProcess_OptimizeMeshes
+                                           | aiProcess_LimitBoneWeights
                                            | aiProcess_RemoveRedundantMaterials);
 
   assert(scene);
