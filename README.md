@@ -24,7 +24,7 @@ Cinderはもとより、Assimpのインクルードファイルとライブラ�
 + ダイアログ(cinder::params)の実装にVisualStudio2010向けのワークアラウンドが含まれています。これを外してCinderライブラリを再ビルドしてください。
 
 
-## Liense
+## License
 License All source code files are licensed under the MPLv2.0 license
 
 [MPLv2.0](https://www.mozilla.org/MPL/2.0/)
